@@ -87,22 +87,15 @@ jobs:
               exit 1
             fi
 
-            if [ ! -f docker-compose.yml ]; then
-              cat > docker-compose.yml <<EOF
-            services:
-              ${CONTAINER_NAME}:
-                image: ${IMAGE_NAME}:latest
-                container_name: ${CONTAINER_NAME}
-                restart: unless-stopped
-                ports:
-                  - "127.0.0.1:${APP_HOST_PORT}:3000"
-                env_file:
-                  - .env
-            EOF
-            fi
-
             docker pull "${IMAGE_NAME}:${IMAGE_TAG}"
             docker tag "${IMAGE_NAME}:${IMAGE_TAG}" "${IMAGE_NAME}:latest"
 
-            docker compose up -d --remove-orphans
+            docker rm -f "${CONTAINER_NAME}" >/dev/null 2>&1 || true
+            docker run -d \
+              --name "${CONTAINER_NAME}" \
+              --restart unless-stopped \
+              --env-file .env \
+              -p "127.0.0.1:${APP_HOST_PORT}:3000" \
+              "${IMAGE_NAME}:latest"
+
             docker image prune -f
