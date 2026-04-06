@@ -1,0 +1,14 @@
+{
+    "name": "@operator-os/core",
+    "version": "1.0.0",
+    "private": true,
+    "main": "./index.ts",
+    "types": "./index.ts",
+    "dependencies": {
+        "@operator-os/db": "workspace:*",
+        "@operator-os/types": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.4.5"
+    }
+}

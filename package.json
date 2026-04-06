@@ -1,32 +1,18 @@
 {
-  "name": "web",
-  "version": "0.1.0",
+  "name": "operator-os",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@clerk/nextjs": "^6.38.2",
-    "@operator-os/core": "workspace:^",
-    "@operator-os/db": "workspace:^",
-    "@operator-os/types": "workspace:^",
-    "@operator-os/ui": "workspace:^",
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9",
-    "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+    "prettier": "^3.2.5",
+    "turbo": "^1.12.4",
+    "typescript": "^5.4.5"
+  },
+  "packageManager": "pnpm@9.1.0"
 }

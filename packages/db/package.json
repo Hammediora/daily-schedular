@@ -1,0 +1,21 @@
+{
+    "name": "@operator-os/db",
+    "version": "1.0.0",
+    "private": true,
+    "main": "./index.ts",
+    "types": "./index.ts",
+    "scripts": {
+        "generate": "prisma generate",
+        "push": "prisma db push",
+        "seed": "tsx seed.ts",
+        "reset-today": "tsx reset-today.ts"
+    },
+    "dependencies": {
+        "@prisma/client": "^5.14.0"
+    },
+    "devDependencies": {
+        "prisma": "^5.14.0",
+        "typescript": "^5.4.5",
+        "tsx": "^4.10.0"
+    }
+}

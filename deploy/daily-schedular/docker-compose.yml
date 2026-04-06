@@ -1,0 +1,9 @@
+services:
+  daily-schedular-app:
+    image: ghcr.io/hammediora/daily-schedular:latest
+    container_name: daily-schedular-app
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3040:3000"
+    env_file:
+      - .env

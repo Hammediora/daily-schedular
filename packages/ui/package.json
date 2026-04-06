@@ -1,0 +1,15 @@
+{
+    "name": "@operator-os/ui",
+    "version": "1.0.0",
+    "private": true,
+    "main": "./index.ts",
+    "types": "./index.ts",
+    "dependencies": {
+        "clsx": "^2.1.1",
+        "tailwind-merge": "^2.3.0"
+    },
+    "devDependencies": {
+        "tailwindcss": "3.4.3",
+        "typescript": "^5.4.5"
+    }
+}

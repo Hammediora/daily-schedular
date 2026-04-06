@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum Lane {
+  REVENUE
+  ASSET
+  LEVERAGE
+  HEALTH
+}
+
+enum BlockType {
+  DEEP_WORK
+  EXECUTION
+  IBM
+  HEALTH
+  REVIEW
+  BUILDER
+  FAMILY    // Sacred. Locked. Never schedulable into.
+}
+
+enum WorkType {
+  DEEP
+  EXECUTION
+  ADMIN
+  SOCIAL
+  RECOVERY
+}
+
+enum TaskStatus {
+  BACKLOG
+  SCHEDULED
+  DONE
+  BUMPED
+  ARCHIVED
+}
+
+enum BlockCompletionState {
+  OPEN
+  COMPLETED
+  PARTIAL
+  SKIPPED
+}
+
+// ============================================
+// MODELS
+// ============================================
+model User {
+  id        String      @id @default(cuid())
+  clerkId   String      @unique
+  email     String      @unique
+  name      String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  workspaces WorkspaceMember[]
+}
+
+model Workspace {
+  id        String      @id @default(cuid())
+  name      String
+  timezone  String      @default("UTC")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  members             WorkspaceMember[]
+  tasks               Task[]
+  blockTemplates      TimeBlockTemplate[]
+  blockInstances      TimeBlockInstance[]
+  weeklyConstraints   WeeklyConstraint[]
+  scorecards          Scorecard[]
+  dailyIntents        DailyIntent[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role      @default(ADMIN)
+
+  user        User      @relation(fields: [userId], references: [id])
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId])
+}
+
+// Enforcement constraints per lane per week
+model WeeklyConstraint {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  lane              Lane
+  minimumMinutes    Int       // Hard floor
+  minimumSessions   Int       // Minimum number of distinct sessions
+
+  workspace         Workspace @relation(fields: [workspaceId], references: [id])
+  @@unique([workspaceId, lane])
+}
+
+// Daily operator intent — drives the command panel
+model DailyIntent {
+  id                    String    @id @default(cuid())
+  workspaceId           String
+  date                  DateTime  @db.Date
+
+  mustAdvanceRevenue    Boolean   @default(true)
+  mustExecuteDeepWork   Boolean   @default(true)
+  mustTrain             Boolean   @default(true)
+  mustProtectFamily     Boolean   @default(true)
+  reflectionNotes       String?
+
+  // IBM daily behavioral checklist
+  ibmFollowUpDone       Boolean   @default(false)
+  ibmOutreachDone       Boolean   @default(false)
+  ibmDeepDiveDone       Boolean   @default(false)
+  ibmRelationshipDone   Boolean   @default(false)
+
+  weekOutcome1          String?
+  weekOutcome2          String?
+  weekOutcome3          String?
+
+  workspace             Workspace @relation(fields: [workspaceId], references: [id])
+  @@unique([workspaceId, date])
+}
+
+model TimeBlockTemplate {
+  id              String      @id @default(cuid())
+  workspaceId     String
+  title           String
+  dayOfWeek       Int         // 0-6 (Sunday-Saturday)
+  startMinute     Int         // Minutes from midnight
+  durationMinutes Int
+  type            BlockType
+  isLocked        Boolean     @default(false)
+
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id])
+}
+
+model TimeBlockInstance {
+  id                String      @id @default(cuid())
+  workspaceId       String
+  date              DateTime    @db.Date
+  startMinute       Int
+  durationMinutes   Int
+  type              BlockType
+  isLocked          Boolean     @default(false)
+  objective         String?     // Primary objective for this block instance
+  parkingLotNotes   String?     // Quick-capture distraction notes
+  completionState   BlockCompletionState @default(OPEN)
+  completionReason  String?
+  completedAt       DateTime?
+  energyRating      Int?        // 1=Low, 2=Medium, 3=High
+
+  scheduledTasks    ScheduledTask[]
+  workspace         Workspace   @relation(fields: [workspaceId], references: [id])
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  workspaceId String
+  title       String
+  notes       String?     // Context, brief, links, next action
+  lane        Lane
+  workType    WorkType
+  project     String
+  impactScore Int
+  effortMins  Int
+  deadline    DateTime?
+  status      TaskStatus  @default(BACKLOG)
+  createdAt   DateTime    @default(now())
+  completedAt DateTime?
+  actualMinutes Int?
+
+  scheduledIn ScheduledTask[]
+  steps       TaskStep[]
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id])
+}
+
+model TaskStep {
+  id          String    @id @default(cuid())
+  taskId      String
+  description String
+  isComplete  Boolean   @default(false)
+  orderIndex  Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model ScheduledTask {
+  id                  String             @id @default(cuid())
+  taskId              String
+  timeBlockInstanceId String
+  orderIndex          Int
+  allocatedMinutes    Int?
+  actualMinutes       Int?
+  isLocked            Boolean            @default(false)
+
+  task                Task               @relation(fields: [taskId], references: [id])
+  timeBlock           TimeBlockInstance  @relation(fields: [timeBlockInstanceId], references: [id])
+
+  @@unique([taskId, timeBlockInstanceId])
+}
+
+model Scorecard {
+  id            String      @id @default(cuid())
+  workspaceId   String
+  weekStartDate DateTime    @db.Date
+  revenueScore  Int         @default(0)
+  assetScore    Int         @default(0)
+  leverageScore Int         @default(0)
+  healthScore   Int         @default(0)
+  discipline    Int         @default(0)
+
+  workspace     Workspace   @relation(fields: [workspaceId], references: [id])
+
+  @@unique([workspaceId, weekStartDate])
+}
