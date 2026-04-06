@@ -2,6 +2,7 @@ import { db } from "@operator-os/db";
 import Sidebar from "@/components/Sidebar";
 import { getLaneStats } from "@/lib/lane-stats";
 import Link from "next/link";
+import { MobileAccordion } from "@/components/ui/Accordion";
 
 const LANE_META: Record<string, { label: string; desc: string; color: string }> = {
   REVENUE:  { label: "Revenue",  desc: "Client work, outreach, deals", color: "#D4AF37" },
@@ -96,13 +97,13 @@ export default async function Scorecard() {
     <div className="min-h-screen bg-background text-foreground flex">
       <Sidebar workspaceName={workspace.name} workspaceId={workspace.id} laneStats={sidebarStats} />
 
-      <main className="flex-1 px-16 py-12 max-w-5xl">
+      <main className="flex-1 px-4 sm:px-16 py-6 sm:py-12 max-w-5xl">
         <header className="flex justify-between items-end mb-12">
           <div>
             <p className="font-sans text-sm text-muted mb-2 tracking-wide uppercase">{weekStr}</p>
             <h2 className="font-serif text-4xl font-bold">Scorecard</h2>
           </div>
-          <div className="flex items-end gap-8">
+          <div className="flex items-end gap-4 sm:gap-8 flex-wrap justify-end">
             {/* Last week comparison */}
             <div className="text-right">
               <p className="font-sans text-xs text-muted uppercase tracking-widest mb-1">Last Week</p>
@@ -168,13 +169,12 @@ export default async function Scorecard() {
           {laneStats.map(({ lane, required, thisWeek, lastWeek, pct, lastPct, delta, isBehind, isDone, sessions }) => {
             const meta = LANE_META[lane] ?? { label: lane, desc: "", color: "#5A5A5A" };
             return (
-              <div key={lane} className="bg-surface border border-border rounded p-6">
+              <MobileAccordion key={lane} title={meta.label}>
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="font-serif text-xl font-semibold">{meta.label}</h3>
                     <p className="font-sans text-xs text-muted mt-0.5">{meta.desc}</p>
                   </div>
-                  <div className="text-right flex items-start gap-6">
+                  <div className="text-right flex items-start gap-4 sm:gap-6">
                     {/* Last week */}
                     <div className="text-right">
                       <p className="font-sans text-xs text-muted mb-1">Last week</p>
@@ -219,7 +219,7 @@ export default async function Scorecard() {
                   ) : "On track"}</span>
                   <span>Target: {required}m</span>
                 </div>
-              </div>
+              </MobileAccordion>
             );
           })}
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition, useRef } from "react";
 import { createTaskAction } from "@/app/actions";
+import Slider from "@/components/ui/Slider";
 
 const LANE_OPTIONS = ["REVENUE", "ASSET", "LEVERAGE", "HEALTH"];
 const WORK_TYPE_OPTIONS = ["DEEP", "EXECUTION", "ADMIN", "SOCIAL", "RECOVERY"];
@@ -11,6 +12,7 @@ export default function QuickCapture() {
   const [title, setTitle] = useState("");
   const [lane, setLane] = useState("REVENUE");
   const [workType, setWorkType] = useState("EXECUTION");
+  const [effortMins, setEffortMins] = useState(60);
   const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -41,7 +43,7 @@ export default function QuickCapture() {
         workType,
         project: "Inbox",
         impactScore: 5,
-        effortMins: 60,
+        effortMins,
       });
       setTitle("");
       setOpen(false);
@@ -115,6 +117,18 @@ export default function QuickCapture() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Effort slider */}
+        <div className="px-5 py-3 border-t border-border">
+          <Slider
+            value={effortMins}
+            onChange={setEffortMins}
+            min={5}
+            max={240}
+            step={5}
+            formatLabel={(v) => `Effort: ${v} min`}
+          />
         </div>
 
         {/* Footer */}

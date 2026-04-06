@@ -12,6 +12,7 @@ import AddTaskModal from "@/components/AddTaskModal";
 import BlockDetailPanel from "@/components/BlockDetailPanel";
 import IbmChecklist from "@/components/IbmChecklist";
 import TodayWorkLog from "@/components/TodayWorkLog";
+import { MobileAccordion } from "@/components/ui/Accordion";
 import Link from "next/link";
 
 function formatMinutes(minutes: number) {
@@ -29,6 +30,42 @@ const BLOCK_TITLES: Record<string, string> = {
 const BLOCK_COLORS: Record<string, string> = {
   DEEP_WORK: "#1B4332", IBM: "#5A5A5A", EXECUTION: "#D4AF37",
   HEALTH: "#1B4332", REVIEW: "#5A5A5A", BUILDER: "#1B4332", FAMILY: "#D4AF37",
+};
+
+const BLOCK_TEXT_CLASSES: Record<string, string> = {
+  DEEP_WORK: "text-primary",
+  EXECUTION: "text-accent",
+  IBM: "text-muted",
+  HEALTH: "text-primary",
+  REVIEW: "text-muted",
+  BUILDER: "text-primary",
+  FAMILY: "text-accent",
+};
+
+const BLOCK_CURRENT_CARD_CLASSES: Record<string, string> = {
+  DEEP_WORK: "bg-primary/5 border-primary/30",
+  EXECUTION: "bg-accent/10 border-accent/30",
+  IBM: "bg-muted/10 border-muted/30",
+  HEALTH: "bg-primary/5 border-primary/30",
+  REVIEW: "bg-muted/10 border-muted/30",
+  BUILDER: "bg-primary/5 border-primary/30",
+  FAMILY: "bg-accent/10 border-accent/30",
+};
+
+const BLOCK_CURRENT_BADGE_CLASSES: Record<string, string> = {
+  DEEP_WORK: "text-primary bg-primary/10",
+  EXECUTION: "text-accent bg-accent/15",
+  IBM: "text-muted bg-muted/10",
+  HEALTH: "text-primary bg-primary/10",
+  REVIEW: "text-muted bg-muted/10",
+  BUILDER: "text-primary bg-primary/10",
+  FAMILY: "text-accent bg-accent/15",
+};
+
+const COMPLETION_CLASSES: Record<string, string> = {
+  COMPLETED: "text-primary border-primary/30 bg-primary/10",
+  PARTIAL: "text-accent border-accent/30 bg-accent/10",
+  SKIPPED: "text-muted border-muted/30 bg-muted/10",
 };
 
 export default async function Home() {
@@ -86,14 +123,14 @@ export default async function Home() {
       {/* Global Quick Capture — ⌘K */}
       <QuickCapture />
 
-      <main className="flex-1 px-16 py-12 max-w-5xl">
-        <header className="flex justify-between items-end mb-10">
+      <main className="flex-1 px-4 sm:px-16 py-6 sm:py-12 max-w-5xl">
+        <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-8 sm:mb-10 gap-4">
           <div>
             <p className="font-sans text-sm text-muted mb-2 tracking-wide uppercase">{todayStr}</p>
-            <h2 className="font-serif text-4xl font-bold">Today's Execution</h2>
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold">Today's Execution</h2>
           </div>
           <div className="flex items-center gap-3">
-            <span className="font-sans text-xs text-muted border border-border px-3 py-1.5 rounded">
+            <span className="hidden sm:inline font-sans text-xs text-muted border border-border px-3 py-1.5 rounded">
               ⌘K to capture
             </span>
             <AddTaskModal />
@@ -104,13 +141,15 @@ export default async function Home() {
         <CurrentFocus workspaceId={workspace.id} />
 
         {/* Daily Command Panel */}
-        <DailyCommandPanel workspaceId={workspace.id} />
+        <MobileAccordion title="Command Panel">
+          <DailyCommandPanel workspaceId={workspace.id} />
+        </MobileAccordion>
 
         {/* End of Day Review */}
         <EndOfDayReviewWrapper workspaceId={workspace.id} />
 
         {/* Timeline */}
-        <div className="relative border-l border-border ml-4 space-y-10 pb-16">
+        <div className="relative border-l border-border ml-2 sm:ml-4 space-y-10 pb-16">
           {blocks.length === 0 && (
             <p className="pl-12 font-sans text-muted">No blocks scheduled for today.</p>
           )}
@@ -119,17 +158,16 @@ export default async function Home() {
             const isPast = block.isPast;
             const isCurrent = block.isCurrent;
             const blockType = block.type;
-            const blockColor = BLOCK_COLORS[blockType] ?? "#5A5A5A";
             const blockLabel = BLOCK_TITLES[blockType] ?? blockType;
             const minutesRemaining = (block.startMinute + block.durationMinutes) - nowMinutes;
-
-            let dotStyle: React.CSSProperties = {
-              backgroundColor: blockColor,
-              opacity: isPast ? 0.3 : 1,
-            };
-            if (!isCurrent && !isPast) {
-              dotStyle = { backgroundColor: "transparent", border: `2px solid ${blockColor}`, opacity: 0.55 };
-            }
+            const textClass = BLOCK_TEXT_CLASSES[blockType] ?? "text-muted";
+            const currentCardClass = BLOCK_CURRENT_CARD_CLASSES[blockType] ?? "bg-muted/10 border-muted/30";
+            const currentBadgeClass = BLOCK_CURRENT_BADGE_CLASSES[blockType] ?? "text-muted bg-muted/10";
+            const dotClass = isCurrent
+              ? `bg-current ${textClass}`
+              : isPast
+                ? `bg-current ${textClass} opacity-30`
+                : `bg-transparent border-2 border-current ${textClass} opacity-[0.55]`;
 
             // Build nowTask for BlockDetailPanel
             const nowTaskRaw = block.scheduledTasks.find(
@@ -153,33 +191,28 @@ export default async function Home() {
                   </div>
                 )}
 
-                <div className="relative pl-12 transition-opacity duration-300" style={{ opacity: isPast ? 0.42 : 1 }}>
-                  <div className="absolute w-3 h-3 rounded-full -left-[6.5px] top-1.5 ring-4 ring-background" style={dotStyle} />
+                <div className={`relative pl-4 sm:pl-12 transition-opacity duration-300 ${isPast ? "opacity-40" : "opacity-100"}`}>
+                  <div className={`absolute w-3 h-3 rounded-full -left-[6.5px] top-1.5 ring-4 ring-background ${dotClass}`} />
 
                   {isCurrent && (
-                    <div className="absolute -left-px top-0 bottom-0 w-0.5" style={{ backgroundColor: blockColor, opacity: 0.45 }} />
+                    <div className={`absolute -left-px top-0 bottom-0 w-0.5 opacity-[0.45] bg-current ${textClass}`} />
                   )}
 
                   <div className="flex items-center gap-3 mb-4 flex-wrap">
-                    <h3 className="font-serif text-xl font-semibold" style={{ color: isCurrent ? blockColor : undefined }}>
+                    <h3 className={`font-serif text-xl font-semibold ${isCurrent ? textClass : ""}`}>
                       {blockLabel}
                     </h3>
                     <span className="font-sans text-xs text-muted bg-surface px-2 py-1 rounded font-medium border border-border">
                       {formatMinutes(block.startMinute)} – {formatMinutes(block.startMinute + block.durationMinutes)}
                     </span>
                     {isCurrent && (
-                      <span className="font-sans text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded flex items-center gap-1.5"
-                        style={{ color: blockColor, backgroundColor: `${blockColor}12` }}>
-                        <span className="inline-block w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: blockColor }} />
+                      <span className={`font-sans text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded flex items-center gap-1.5 ${currentBadgeClass}`}>
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full animate-pulse bg-current ${textClass}`} />
                         Active
                       </span>
                     )}
                     {isPast && block.completionState && block.completionState !== "OPEN" ? (
-                      <span className="font-sans text-xs px-2 py-0.5 rounded border" style={{
-                        color: block.completionState === "COMPLETED" ? "#1B4332" : block.completionState === "PARTIAL" ? "#D4AF37" : "#5A5A5A",
-                        borderColor: block.completionState === "COMPLETED" ? "#1B433230" : block.completionState === "PARTIAL" ? "#D4AF3730" : "#5A5A5A30",
-                        backgroundColor: block.completionState === "COMPLETED" ? "#1B433210" : block.completionState === "PARTIAL" ? "#D4AF3710" : "#5A5A5A10",
-                      }}>
+                      <span className={`font-sans text-xs px-2 py-0.5 rounded border ${COMPLETION_CLASSES[block.completionState] ?? "text-muted border-muted/30 bg-muted/10"}`}>
                         {block.completionState === "COMPLETED" ? "Completed" : block.completionState === "PARTIAL" ? "Partial" : "Skipped"}
                       </span>
                     ) : isPast && (
@@ -196,7 +229,7 @@ export default async function Home() {
                     {/* Start Block / Enter Now Mode button on all non-past blocks */}
                     {!isPast && (
                       <Link href={`/now?blockId=${block.id}`}
-                        className="font-sans text-xs font-semibold border border-border px-3 py-1 rounded hover:bg-surface transition-colors ml-auto">
+                        className="font-sans text-xs font-semibold border border-border px-3 py-1 rounded hover:bg-surface transition-colors sm:ml-auto">
                         {isCurrent ? "Enter Now Mode" : "Start Block"} →
                       </Link>
                     )}
@@ -204,11 +237,7 @@ export default async function Home() {
 
                   {/* Tasks */}
                   {block.scheduledTasks.length > 0 ? (
-                    <div className="rounded border p-5 space-y-4 shadow-sm"
-                      style={{
-                        backgroundColor: isCurrent ? `${blockColor}06` : "var(--color-surface)",
-                        borderColor: isCurrent ? `${blockColor}30` : "var(--color-border)",
-                      }}>
+                    <div className={`rounded border p-3 sm:p-5 space-y-4 shadow-sm ${isCurrent ? currentCardClass : "bg-surface border-border"}`}>
                       {block.scheduledTasks.map((st, stIdx) => (
                         <TaskRow
                           key={st.id}
@@ -222,9 +251,10 @@ export default async function Home() {
                     </div>
                   ) : blockType === "IBM" ? (
                     /* IBM Checklist instead of empty */
-                    <div className="rounded border p-5 shadow-sm"
-                      style={{ backgroundColor: "var(--color-surface)", borderColor: "var(--color-border)" }}>
-                      <IbmChecklist initial={ibmState} />
+                    <div className="rounded border p-5 shadow-sm bg-surface border-border">
+                      <MobileAccordion title="IBM Checklist">
+                        <IbmChecklist initial={ibmState} />
+                      </MobileAccordion>
                     </div>
                   ) : (
                     <div className="bg-background border border-dashed border-border rounded p-6 text-center">
@@ -259,7 +289,9 @@ export default async function Home() {
         </div>
 
         {/* Today Work Log */}
-        <TodayWorkLog workspaceId={workspace.id} />
+        <MobileAccordion title="Work Log">
+          <TodayWorkLog workspaceId={workspace.id} />
+        </MobileAccordion>
 
       </main>
     </div>

@@ -68,7 +68,7 @@ export default function CurrentFocusClient({
         backgroundColor: "rgba(212,175,55,0.04)",
       }}
     >
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-4">
           {/* Pulsing indicator */}
           <div className="relative mt-1 shrink-0">
@@ -107,7 +107,7 @@ export default function CurrentFocusClient({
           </div>
         </div>
 
-        <div className="text-right shrink-0 space-y-2">
+        <div className="flex sm:flex-col sm:text-right sm:shrink-0 sm:space-y-2 items-center gap-4 sm:gap-0 flex-wrap">
           <p className="font-sans text-xs text-muted">
             {formatMinutes(blockStartMinute)} – {formatMinutes(blockEndMinute)}
           </p>

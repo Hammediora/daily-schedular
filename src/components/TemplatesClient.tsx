@@ -2,15 +2,21 @@
 
 import { useState, useTransition } from "react";
 import { createBlockTemplateAction, deleteBlockTemplateAction } from "@/app/actions";
+import Dropdown from "@/components/ui/Dropdown";
 
 const BLOCK_TYPES = ["DEEP_WORK", "EXECUTION", "IBM", "HEALTH", "REVIEW", "BUILDER", "FAMILY"];
 const BLOCK_LABELS: Record<string, string> = {
   DEEP_WORK: "Deep Work", EXECUTION: "Execution", IBM: "IBM", HEALTH: "Health",
   REVIEW: "Review", BUILDER: "Builder", FAMILY: "Family",
 };
-const BLOCK_COLORS: Record<string, string> = {
-  DEEP_WORK: "#1B4332", EXECUTION: "#D4AF37", IBM: "#5A5A5A", HEALTH: "#1B4332",
-  REVIEW: "#5A5A5A", BUILDER: "#1B4332", FAMILY: "#D4AF37",
+const BLOCK_BORDER_CLASSES: Record<string, string> = {
+  DEEP_WORK: "border-l-[#1B4332]",
+  EXECUTION: "border-l-[#D4AF37]",
+  IBM: "border-l-[#5A5A5A]",
+  HEALTH: "border-l-[#1B4332]",
+  REVIEW: "border-l-[#5A5A5A]",
+  BUILDER: "border-l-[#1B4332]",
+  FAMILY: "border-l-[#D4AF37]",
 };
 
 function minutesToTime(minutes: number) {
@@ -83,24 +89,40 @@ export default function TemplatesClient({ templates, dayNames }: { templates: an
               <input required type="text" value={title} onChange={e => setTitle(e.target.value)} className={inputClass} placeholder="e.g. Deep Work" />
             </div>
             <div>
-              <label className={labelClass}>Day of Week</label>
-              <select value={dayOfWeek} onChange={e => setDayOfWeek(+e.target.value)} className={inputClass}>
-                {dayNames.map((name, i) => <option key={i} value={i}>{name}</option>)}
-              </select>
+              <label htmlFor="template-day-of-week" className={labelClass}>Day of Week</label>
+              <Dropdown
+                id="template-day-of-week"
+                label="Day of week"
+                value={String(dayOfWeek)}
+                onChange={v => setDayOfWeek(+v)}
+                options={dayNames.map((name, i) => ({ value: String(i), label: name }))}
+              />
             </div>
             <div>
-              <label className={labelClass}>Block Type</label>
-              <select value={type} onChange={e => setType(e.target.value)} className={inputClass}>
-                {BLOCK_TYPES.map(t => <option key={t} value={t}>{BLOCK_LABELS[t]}</option>)}
-              </select>
+              <label htmlFor="template-block-type" className={labelClass}>Block Type</label>
+              <Dropdown
+                id="template-block-type"
+                label="Block type"
+                value={type}
+                onChange={v => setType(v)}
+                options={[
+                  { value: "DEEP_WORK", label: "Deep Work" },
+                  { value: "EXECUTION", label: "Execution" },
+                  { value: "IBM", label: "IBM" },
+                  { value: "HEALTH", label: "Health" },
+                  { value: "REVIEW", label: "Review" },
+                  { value: "BUILDER", label: "Builder Block" },
+                  { value: "FAMILY", label: "Family" },
+                ]}
+              />
             </div>
             <div>
-              <label className={labelClass}>Start Time</label>
-              <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className={inputClass} />
+              <label htmlFor="template-start-time" className={labelClass}>Start Time</label>
+              <input id="template-start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} className={inputClass} />
             </div>
             <div>
-              <label className={labelClass}>Duration (mins)</label>
-              <input type="number" min="15" step="15" value={durationMinutes} onChange={e => setDurationMinutes(+e.target.value)} className={inputClass} />
+              <label htmlFor="template-duration" className={labelClass}>Duration (mins)</label>
+              <input id="template-duration" type="number" min="15" step="15" value={durationMinutes} onChange={e => setDurationMinutes(+e.target.value)} className={inputClass} />
             </div>
           </div>
           <label className="flex items-center gap-3 cursor-pointer">
@@ -121,8 +143,10 @@ export default function TemplatesClient({ templates, dayNames }: { templates: an
             <p className="font-sans text-xs uppercase tracking-widest text-muted mb-3 font-semibold">{name}</p>
             <div className="space-y-2">
               {dayTemplates.map((t: any) => (
-                <div key={t.id} className="border border-border rounded p-4 flex items-center justify-between group"
-                  style={{ borderLeft: `2px solid ${BLOCK_COLORS[t.type] ?? "#5A5A5A"}` }}>
+                <div
+                  key={t.id}
+                  className={`border border-border border-l-2 rounded p-4 flex items-center justify-between group ${BLOCK_BORDER_CLASSES[t.type] ?? "border-l-muted"}`}
+                >
                   <div className="flex items-center gap-4">
                     <div>
                       <p className="font-sans text-sm font-medium">{t.title}</p>

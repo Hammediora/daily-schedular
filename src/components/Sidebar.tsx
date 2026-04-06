@@ -56,7 +56,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="w-64 border-r border-border min-h-screen p-8 flex flex-col justify-between shrink-0">
+    <aside className="hidden sm:flex w-64 border-r border-border min-h-screen p-8 flex-col justify-between shrink-0">
       <div>
         <h1 className="font-serif text-2xl font-bold tracking-tight mb-12">Operator</h1>
 

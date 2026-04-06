@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { completeBlockAction, setBlockEnergyRatingAction, autoRescheduleAction } from "@/app/actions";
+import Dropdown from "@/components/ui/Dropdown";
 
 interface Props {
   blockId: string;
@@ -10,12 +11,6 @@ interface Props {
   onDone: (rescheduleMsg?: string) => void;
   onCancel: () => void;
 }
-
-const ENERGY_LABELS = [
-  { value: 1, label: "Low", color: "#D4AF37" },
-  { value: 2, label: "Med", color: "#5A5A5A" },
-  { value: 3, label: "High", color: "#1B4332" },
-] as const;
 
 export default function BlockCompletionModal({ blockId, workspaceId, blockLabel, onDone, onCancel }: Props) {
   const [state, setState] = useState<"COMPLETED" | "PARTIAL" | "SKIPPED">("COMPLETED");
@@ -92,21 +87,15 @@ export default function BlockCompletionModal({ blockId, workspaceId, blockLabel,
             <label className="font-sans text-xs uppercase tracking-widest text-muted font-semibold block mb-2">
               Energy Level
             </label>
-            <div className="flex gap-2">
-              {ENERGY_LABELS.map(e => (
-                <button
-                  key={e.value}
-                  onClick={() => setEnergy(e.value)}
-                  className={`flex-1 py-2 rounded border text-sm font-sans font-semibold transition-colors ${
-                    energy === e.value
-                      ? "border-primary text-primary bg-primary/5"
-                      : "border-border text-muted hover:border-foreground/30"
-                  }`}
-                >
-                  {e.label}
-                </button>
-              ))}
-            </div>
+            <Dropdown
+              value={energy != null ? String(energy) : ""}
+              onChange={(v) => setEnergy(Number(v))}
+              options={[
+                { value: "1", label: "Low" },
+                { value: "2", label: "Med" },
+                { value: "3", label: "High" },
+              ]}
+            />
           </div>
         </div>
 

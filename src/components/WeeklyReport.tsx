@@ -1,3 +1,5 @@
+import { MobileAccordion } from "@/components/ui/Accordion";
+
 const LANE_LABELS: Record<string, string> = {
   REVENUE: "Revenue", ASSET: "Asset", LEVERAGE: "Leverage", HEALTH: "Health",
 };
@@ -69,104 +71,110 @@ export default function WeeklyReport({ weekLabel, lanes, blocks, totalTasks, com
 
       {/* Wins — completed tasks by lane */}
       <section>
-        <p className="font-sans text-xs uppercase tracking-widest text-muted font-semibold mb-4">Wins</p>
-        <div className="space-y-4">
-          {lanes.filter(l => l.completedTasks.length > 0).map(lane => (
-            <div key={lane.lane}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: lane.color }} />
-                <p className="font-sans text-sm font-semibold">{lane.label}</p>
-                <p className="font-sans text-xs text-muted">
-                  {lane.completedTasks.length} tasks · {lane.totalEstimated}m est
-                  {lane.totalActual > 0 && ` · ${lane.totalActual}m actual`}
-                </p>
+        <MobileAccordion title="Wins">
+          <p className="font-sans text-xs uppercase tracking-widest text-muted font-semibold mb-4">Wins</p>
+          <div className="space-y-4">
+            {lanes.filter(l => l.completedTasks.length > 0).map(lane => (
+              <div key={lane.lane}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: lane.color }} />
+                  <p className="font-sans text-sm font-semibold">{lane.label}</p>
+                  <p className="font-sans text-xs text-muted">
+                    {lane.completedTasks.length} tasks · {lane.totalEstimated}m est
+                    {lane.totalActual > 0 && ` · ${lane.totalActual}m actual`}
+                  </p>
+                </div>
+                <div className="space-y-1 ml-4">
+                  {lane.completedTasks.map((t, i) => (
+                    <div key={i} className="flex items-center justify-between py-1 border-b border-border last:border-0">
+                      <span className="font-sans text-sm text-foreground">{t.title}</span>
+                      <span className="font-sans text-xs text-muted">
+                        {t.effortMins}m{t.actualMinutes != null && ` → ${t.actualMinutes}m`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1 ml-4">
-                {lane.completedTasks.map((t, i) => (
-                  <div key={i} className="flex items-center justify-between py-1 border-b border-border last:border-0">
-                    <span className="font-sans text-sm text-foreground">{t.title}</span>
-                    <span className="font-sans text-xs text-muted">
-                      {t.effortMins}m{t.actualMinutes != null && ` → ${t.actualMinutes}m`}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </MobileAccordion>
       </section>
 
       {/* Misses — lanes below target */}
       <section>
-        <p className="font-sans text-xs uppercase tracking-widest text-muted font-semibold mb-4">Misses</p>
-        <div className="space-y-3">
-          {lanes.filter(l => l.totalEstimated < l.requiredMinutes).map(lane => {
-            const deficit = lane.requiredMinutes - lane.totalEstimated;
-            const pct = Math.round((lane.totalEstimated / lane.requiredMinutes) * 100);
-            return (
-              <div key={lane.lane} className="border border-border rounded p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: lane.color }} />
-                    <span className="font-sans text-sm font-semibold">{lane.label}</span>
+        <MobileAccordion title="Misses">
+          <p className="font-sans text-xs uppercase tracking-widest text-muted font-semibold mb-4">Misses</p>
+          <div className="space-y-3">
+            {lanes.filter(l => l.totalEstimated < l.requiredMinutes).map(lane => {
+              const deficit = lane.requiredMinutes - lane.totalEstimated;
+              const pct = Math.round((lane.totalEstimated / lane.requiredMinutes) * 100);
+              return (
+                <div key={lane.lane} className="border border-border rounded p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: lane.color }} />
+                      <span className="font-sans text-sm font-semibold">{lane.label}</span>
+                    </div>
+                    <span className="font-sans text-xs font-semibold" style={{ color: "#D4AF37" }}>
+                      {deficit}m short
+                    </span>
                   </div>
-                  <span className="font-sans text-xs font-semibold" style={{ color: "#D4AF37" }}>
-                    {deficit}m short
-                  </span>
+                  <div className="h-1 bg-border rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: lane.color }} />
+                  </div>
+                  <p className="font-sans text-xs text-muted mt-1">{lane.totalEstimated}m / {lane.requiredMinutes}m</p>
                 </div>
-                <div className="h-1 bg-border rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: lane.color }} />
-                </div>
-                <p className="font-sans text-xs text-muted mt-1">{lane.totalEstimated}m / {lane.requiredMinutes}m</p>
-              </div>
-            );
-          })}
-          {lanes.every(l => l.totalEstimated >= l.requiredMinutes) && (
-            <p className="font-sans text-sm text-muted italic">All lanes hit their targets this week.</p>
-          )}
-        </div>
+              );
+            })}
+            {lanes.every(l => l.totalEstimated >= l.requiredMinutes) && (
+              <p className="font-sans text-sm text-muted italic">All lanes hit their targets this week.</p>
+            )}
+          </div>
+        </MobileAccordion>
       </section>
 
       {/* Block Utilization */}
       <section>
-        <p className="font-sans text-xs uppercase tracking-widest text-muted font-semibold mb-4">Block Utilization</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {blocks.filter(b => b.total > 0).map(b => (
-            <div key={b.type} className="border border-border rounded p-4">
-              <p className="font-sans text-sm font-semibold mb-2">{b.label}</p>
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span className="font-sans text-xs text-muted">Total</span>
-                  <span className="font-sans text-xs font-semibold">{b.total}</span>
+        <MobileAccordion title="Block Utilization">
+          <p className="font-sans text-xs uppercase tracking-widest text-muted font-semibold mb-4">Block Utilization</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {blocks.filter(b => b.total > 0).map(b => (
+              <div key={b.type} className="border border-border rounded p-4">
+                <p className="font-sans text-sm font-semibold mb-2">{b.label}</p>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="font-sans text-xs text-muted">Total</span>
+                    <span className="font-sans text-xs font-semibold">{b.total}</span>
+                  </div>
+                  {b.completed > 0 && (
+                    <div className="flex justify-between">
+                      <span className="font-sans text-xs" style={{ color: "#1B4332" }}>Completed</span>
+                      <span className="font-sans text-xs font-semibold">{b.completed}</span>
+                    </div>
+                  )}
+                  {b.partial > 0 && (
+                    <div className="flex justify-between">
+                      <span className="font-sans text-xs" style={{ color: "#D4AF37" }}>Partial</span>
+                      <span className="font-sans text-xs font-semibold">{b.partial}</span>
+                    </div>
+                  )}
+                  {b.skipped > 0 && (
+                    <div className="flex justify-between">
+                      <span className="font-sans text-xs text-muted">Skipped</span>
+                      <span className="font-sans text-xs font-semibold">{b.skipped}</span>
+                    </div>
+                  )}
+                  {b.avgEnergy != null && (
+                    <div className="flex justify-between border-t border-border pt-1 mt-1">
+                      <span className="font-sans text-xs text-muted">Avg Energy</span>
+                      <span className="font-sans text-xs font-semibold">{b.avgEnergy.toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
-                {b.completed > 0 && (
-                  <div className="flex justify-between">
-                    <span className="font-sans text-xs" style={{ color: "#1B4332" }}>Completed</span>
-                    <span className="font-sans text-xs font-semibold">{b.completed}</span>
-                  </div>
-                )}
-                {b.partial > 0 && (
-                  <div className="flex justify-between">
-                    <span className="font-sans text-xs" style={{ color: "#D4AF37" }}>Partial</span>
-                    <span className="font-sans text-xs font-semibold">{b.partial}</span>
-                  </div>
-                )}
-                {b.skipped > 0 && (
-                  <div className="flex justify-between">
-                    <span className="font-sans text-xs text-muted">Skipped</span>
-                    <span className="font-sans text-xs font-semibold">{b.skipped}</span>
-                  </div>
-                )}
-                {b.avgEnergy != null && (
-                  <div className="flex justify-between border-t border-border pt-1 mt-1">
-                    <span className="font-sans text-xs text-muted">Avg Energy</span>
-                    <span className="font-sans text-xs font-semibold">{b.avgEnergy.toFixed(1)}</span>
-                  </div>
-                )}
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </MobileAccordion>
       </section>
     </div>
   );

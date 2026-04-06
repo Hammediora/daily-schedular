@@ -3,9 +3,13 @@
 import { useState, useTransition } from "react";
 import { generateWeekScheduleAction } from "./actions";
 import { submitDailyReviewAction } from "@/app/actions";
+import { MobileAccordion } from "@/components/ui/Accordion";
 
-const LANE_COLORS: Record<string, string> = {
-  REVENUE: "#D4AF37", ASSET: "#1B4332", LEVERAGE: "#5A5A5A", HEALTH: "#8B4513",
+const LANE_PROGRESS_CLASSES: Record<string, string> = {
+  REVENUE: "text-accent",
+  ASSET: "text-primary",
+  LEVERAGE: "text-muted",
+  HEALTH: "text-primary",
 };
 
 interface WeekStat {
@@ -73,11 +77,11 @@ export default function PlanClient({
               <span className="font-sans text-xs text-muted">Last week: {lastWeekScore}</span>
             )}
             <div className="flex items-baseline gap-1.5">
-              <span className="font-serif text-4xl font-bold" style={{ color: thisWeekScore >= 70 ? "#1B4332" : "#D4AF37" }}>
+              <span className={`font-serif text-4xl font-bold ${thisWeekScore >= 70 ? "text-primary" : "text-accent"}`}>
                 {thisWeekScore}
               </span>
               {delta !== 0 && (
-                <span className="font-sans text-sm font-bold" style={{ color: delta > 0 ? "#1B4332" : "#D4AF37" }}>
+                <span className={`font-sans text-sm font-bold ${delta > 0 ? "text-primary" : "text-accent"}`}>
                   {delta > 0 ? "↑" : "↓"}{Math.abs(delta)}
                 </span>
               )}
@@ -85,60 +89,58 @@ export default function PlanClient({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          {thisWeekStats.map(stat => {
-            const last = lastWeekStats.find(l => l.lane === stat.lane);
-            const d = stat.pct - (last?.pct ?? 0);
-            return (
-              <div key={stat.lane} className="bg-surface border border-border rounded p-5">
-                <div className="flex justify-between items-start mb-3">
-                  <p className="font-sans text-sm font-semibold">{stat.label}</p>
-                  <div className="text-right">
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-sans text-lg font-bold">{stat.pct}%</span>
-                      {d !== 0 && (
-                        <span className="font-sans text-xs font-bold" style={{ color: d > 0 ? "#1B4332" : "#D4AF37" }}>
-                          {d > 0 ? "↑" : "↓"}{Math.abs(d)}
-                        </span>
-                      )}
+        <MobileAccordion title="This Week">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {thisWeekStats.map(stat => {
+              const last = lastWeekStats.find(l => l.lane === stat.lane);
+              const d = stat.pct - (last?.pct ?? 0);
+              return (
+                <div key={stat.lane} className="bg-surface border border-border rounded p-5">
+                  <div className="flex justify-between items-start mb-3">
+                    <p className="font-sans text-sm font-semibold">{stat.label}</p>
+                    <div className="text-right">
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-sans text-lg font-bold">{stat.pct}%</span>
+                        {d !== 0 && (
+                          <span className={`font-sans text-xs font-bold ${d > 0 ? "text-primary" : "text-accent"}`}>
+                            {d > 0 ? "↑" : "↓"}{Math.abs(d)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-sans text-xs text-muted">{stat.completed}m / {stat.required}m</p>
                     </div>
-                    <p className="font-sans text-xs text-muted">{stat.completed}m / {stat.required}m</p>
                   </div>
+                  <progress
+                    className={`w-full h-1.5 rounded-full overflow-hidden ${LANE_PROGRESS_CLASSES[stat.lane] ?? "text-muted"}`}
+                    max={100}
+                    value={stat.pct}
+                  />
+                  <p className="font-sans text-xs text-muted mt-2">{stat.sessionsCompleted} sessions completed</p>
                 </div>
-                <div className="relative h-1.5 bg-border rounded-full overflow-hidden">
-                  {last && last.pct > 0 && (
-                    <div className="absolute h-full rounded-full opacity-20"
-                      style={{ width: `${last.pct}%`, backgroundColor: LANE_COLORS[stat.lane] }} />
-                  )}
-                  <div className="h-full rounded-full transition-all duration-700"
-                    style={{ width: `${stat.pct}%`, backgroundColor: LANE_COLORS[stat.lane] ?? "#5A5A5A" }} />
-                </div>
-                <p className="font-sans text-xs text-muted mt-2">{stat.sessionsCompleted} sessions completed</p>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </MobileAccordion>
 
         {/* Reflection box */}
-        <div className="mt-6">
-          <label className="font-sans text-xs uppercase tracking-widest text-muted font-semibold block mb-2">
-            Weekly Reflection
-          </label>
-          <textarea
-            value={reflections}
-            onChange={e => setReflections(e.target.value)}
-            onBlur={() => {
-              if (reflections.trim()) {
-                startTransition(async () => {
-                  await submitDailyReviewAction(reflections);
-                });
-              }
-            }}
-            rows={4}
-            placeholder="What moved? What stalled? What will be different next week?"
-            className="w-full bg-surface border border-border rounded p-4 font-sans text-sm text-foreground placeholder-muted resize-none focus:outline-none focus:border-primary"
-          />
-        </div>
+        <MobileAccordion title="Reflection">
+          <div className="mt-2">
+            <textarea
+              value={reflections}
+              onChange={e => setReflections(e.target.value)}
+              onBlur={() => {
+                if (reflections.trim()) {
+                  startTransition(async () => {
+                    await submitDailyReviewAction(reflections);
+                  });
+                }
+              }}
+              rows={4}
+              placeholder="What moved? What stalled? What will be different next week?"
+              className="w-full bg-surface border border-border rounded p-4 font-sans text-sm text-foreground placeholder-muted resize-none focus:outline-none focus:border-primary"
+            />
+          </div>
+        </MobileAccordion>
       </section>
 
       {/* === SECTION 2: NEXT WEEK PREVIEW === */}
@@ -151,7 +153,7 @@ export default function PlanClient({
         </div>
 
         {/* Week grid preview */}
-        <div className="grid grid-cols-7 gap-2 mb-8">
+        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-8">
           {nextWeekPreview.map(({ day, date, blocks }) => (
             <div key={date} className="space-y-1.5">
               <div className="text-center mb-2">
@@ -162,8 +164,7 @@ export default function PlanClient({
                 <div className="h-12 border border-dashed border-border rounded opacity-30" />
               ) : (
                 blocks.map((b, i) => (
-                  <div key={i} className="border border-border rounded p-1.5 text-xs font-sans"
-                    style={{ borderLeft: "2px solid #1B4332" }}>
+                  <div key={i} className="border border-border border-l-2 border-l-primary rounded p-1.5 text-xs font-sans">
                     <p className="font-semibold text-foreground truncate">{b.label}</p>
                     {b.tasks > 0 && <p className="text-muted">{b.tasks} tasks</p>}
                   </div>
@@ -175,8 +176,8 @@ export default function PlanClient({
 
         {/* Generate button */}
         {result ? (
-          <div className="border border-border rounded p-6 text-center" style={{ backgroundColor: "rgba(27,67,50,0.04)" }}>
-            <p className="font-sans text-sm font-semibold mb-1" style={{ color: "#1B4332" }}>
+          <div className="border border-border rounded p-6 text-center bg-primary/5">
+            <p className="font-sans text-sm font-semibold mb-1 text-primary">
               Next week scheduled ✓
             </p>
             <p className="font-sans text-xs text-muted">

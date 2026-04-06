@@ -27,3 +27,34 @@
     @apply selection:bg-accent selection:text-accent-foreground;
   }
 }
+
+/* Slider thumb styles */
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-foreground);
+  cursor: pointer;
+  margin-top: -8px;
+}
+.slider-input::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-foreground);
+  cursor: pointer;
+  border: none;
+}
+@media (max-width: 639px) {
+  .slider-input::-webkit-slider-thumb {
+    width: 28px;
+    height: 28px;
+    margin-top: -13px;
+  }
+  .slider-input::-moz-range-thumb {
+    width: 28px;
+    height: 28px;
+  }
+}

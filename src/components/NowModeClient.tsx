@@ -124,7 +124,7 @@ export default function NowModeClient({
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#0F0F0F", color: "#F1EAE4" }}>
 
       {/* Exit bar */}
-      <div className="flex items-center justify-between px-8 py-4 border-b" style={{ borderColor: "#1C1C1C" }}>
+      <div className="flex items-center justify-between px-4 sm:px-8 py-4 border-b" style={{ borderColor: "#1C1C1C" }}>
         <button
           onClick={() => router.push("/")}
           className="font-sans text-xs text-muted hover:text-foreground transition-colors"
@@ -138,7 +138,7 @@ export default function NowModeClient({
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col items-center justify-center px-8 max-w-2xl mx-auto w-full py-12 space-y-10">
+      <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 max-w-2xl mx-auto w-full py-12 space-y-10">
 
         {/* Block label */}
         <div className="text-center">

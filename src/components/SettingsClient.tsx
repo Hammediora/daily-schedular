@@ -3,6 +3,9 @@
 import { useState, useTransition } from "react";
 import { updateWeeklyConstraintAction, updateDailyIntentAction } from "@/app/actions";
 import Link from "next/link";
+import Dropdown from "@/components/ui/Dropdown";
+import Slider from "@/components/ui/Slider";
+import { MobileAccordion } from "@/components/ui/Accordion";
 
 const LANES = ["REVENUE", "ASSET", "LEVERAGE", "HEALTH"] as const;
 const LANE_LABELS: Record<string, string> = {
@@ -105,23 +108,29 @@ export default function SettingsClient({
         <p className="font-sans text-sm text-muted mb-6">Minimum time and sessions required per lane each week. The engine uses these to detect drift.</p>
         <div className="space-y-6">
           {LANES.map(lane => (
-            <div key={lane} className="bg-surface border border-border rounded p-5">
-              <p className="font-sans text-sm font-semibold mb-4" style={{ color: lane === "REVENUE" ? "#D4AF37" : "#1B4332" }}>
-                {LANE_LABELS[lane]}
-              </p>
-              <div className="flex gap-8">
+            <MobileAccordion key={lane} title={LANE_LABELS[lane]}>
+              <div className="flex flex-col gap-6 pt-2">
                 <div>
-                  <label className={labelClass}>Min Minutes / Week</label>
-                  <input
-                    type="number" min="0" step="30"
+                  <label htmlFor={`constraint-minutes-${lane}`} className={labelClass}>Min Minutes / Week</label>
+                  <Slider
+                    id={`constraint-minutes-${lane}`}
+                    label={`${LANE_LABELS[lane]} minimum minutes per week`}
                     value={constraintValues[lane].minimumMinutes}
-                    onChange={e => setConstraintValues(v => ({ ...v, [lane]: { ...v[lane], minimumMinutes: +e.target.value } }))}
-                    className={inputClass}
+                    onChange={(val) => setConstraintValues(v => ({ ...v, [lane]: { ...v[lane], minimumMinutes: val } }))}
+                    min={0}
+                    max={480}
+                    step={15}
+                    formatLabel={(v) => {
+                      const h = Math.floor(v / 60);
+                      const m = v % 60;
+                      return h > 0 && m > 0 ? `${h}h ${m}m` : h > 0 ? `${h}h` : `${m}m`;
+                    }}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Min Sessions / Week</label>
+                  <label htmlFor={`constraint-sessions-${lane}`} className={labelClass}>Min Sessions / Week</label>
                   <input
+                    id={`constraint-sessions-${lane}`}
                     type="number" min="0"
                     value={constraintValues[lane].minimumSessions}
                     onChange={e => setConstraintValues(v => ({ ...v, [lane]: { ...v[lane], minimumSessions: +e.target.value } }))}
@@ -129,7 +138,7 @@ export default function SettingsClient({
                   />
                 </div>
               </div>
-            </div>
+            </MobileAccordion>
           ))}
         </div>
         <button onClick={handleSaveConstraints} disabled={pending}

@@ -132,8 +132,8 @@ export default function BlockDetailPanel({
 
           {/* Header row — active timer */}
           {isActive && (
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 pb-3 border-b border-border">
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setTimerRunning(r => !r)}
@@ -143,17 +143,17 @@ export default function BlockDetailPanel({
                   </button>
                   <span className="font-mono text-sm text-foreground">{timerDisplay}</span>
                 </div>
-                <span className="text-muted text-xs">{minutesRemaining}m remaining in block</span>
+                <span className="text-muted text-xs">{minutesRemaining}m remaining</span>
               </div>
               <div className="flex items-center gap-2">
                 <Link href={`/now?blockId=${blockId}`}
-                  className="font-sans text-xs font-semibold border border-border rounded px-3 py-1 hover:bg-surface transition-colors">
+                  className="font-sans text-xs font-semibold border border-border rounded px-3 py-1 hover:bg-surface transition-colors flex-1 text-center sm:flex-none sm:text-left">
                   Now Mode →
                 </Link>
                 <button
                   onClick={() => setShowCompletionModal(true)}
                   disabled={pending}
-                  className="font-sans text-xs font-semibold text-white rounded px-3 py-1 disabled:opacity-40"
+                  className="font-sans text-xs font-semibold text-white rounded px-3 py-1 disabled:opacity-40 flex-1 sm:flex-none"
                   style={{ backgroundColor: "#1B4332" }}
                 >
                   Complete Block →
