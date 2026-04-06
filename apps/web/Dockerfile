@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:22-bookworm-slim AS base
+FROM node:22-bullseye-slim AS base
 WORKDIR /app
 RUN corepack enable
 RUN apt-get update -y \
@@ -24,7 +24,7 @@ COPY . .
 RUN pnpm --filter @operator-os/db generate
 RUN pnpm --filter web build
 
-FROM node:22-bookworm-slim AS runner
+FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
