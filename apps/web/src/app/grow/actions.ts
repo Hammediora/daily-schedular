@@ -1,7 +1,7 @@
 "use server";
 
 import { db, SavedContentType } from "@operator-os/db";
-import { generateDailyContent } from "@/lib/daily-growth";
+import { generateDailyContent, regenerateSingleCard, type CardType } from "@/lib/daily-growth";
 import { revalidatePath } from "next/cache";
 
 function todayMidnight(): Date {
@@ -17,6 +17,13 @@ export async function generateDailyContentAction(): Promise<void> {
 
   const data = await generateDailyContent();
   await db.dailyContent.create({ data: { date: today, ...data } });
+}
+
+export async function regenerateCardAction(cardType: CardType) {
+  const today = todayMidnight();
+  const partial = await regenerateSingleCard(cardType);
+  await db.dailyContent.update({ where: { date: today }, data: partial });
+  return partial;
 }
 
 export async function getTodayContent() {

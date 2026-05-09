@@ -40,6 +40,38 @@ export type DailyContentData = {
   storageConceptExplanation: string;
 };
 
+const SINGLE_CARD_PROMPTS: Record<string, string> = {
+  WORD: `Return ONLY valid JSON, no markdown fences:
+{"word":"a sophisticated but natural English word that improves conversational vocabulary","wordDefinition":"clear simple definition","wordPronunciation":"phonetic guide e.g. SAN-gwinn","wordCasual":"casual conversation example","wordBusiness":"business conversation example","wordTechnical":"technical conversation example"}`,
+  TECH: `Return ONLY valid JSON, no markdown fences:
+{"techTip":"a practical specific tip relevant to software engineering, AI/ML, or founder/operator work"}`,
+  QUOTE: `Return ONLY valid JSON, no markdown fences:
+{"quote":"an impactful quote from philosophy, stoicism, strategy, or leadership — no generic motivational content","quoteAuthor":"full author name"}`,
+  MENTAL_MODEL: `Return ONLY valid JSON, no markdown fences:
+{"mentalModel":"name of a well-known mental model","mentalModelExplanation":"2-3 sentences: what it is and one concrete way to apply it today"}`,
+  POEM: `Return ONLY valid JSON, no markdown fences:
+{"poem":"a complete short poem from Greek mythology tradition, Rumi, Hafiz, Shakespeare, Keats, Wordsworth, Dylan Thomas or other classic poets","poemTitle":"title","poemAuthor":"poet full name"}`,
+  STORAGE: `Return ONLY valid JSON, no markdown fences:
+{"storageConceptTitle":"a specific enterprise storage technology concept (NVMe, NVMe-oF, RAID, erasure coding, deduplication, IBM FlashSystem, fibre channel, iSCSI, multipathing, snapshots, replication, RPO/RTO, cache algorithms, DRAM vs NAND, object storage, S3 internals, etc)","storageConceptExplanation":"3-4 sentences: what it is technically, how it works under the hood, why it matters in enterprise, one real-world scenario — written for a senior IBM storage specialist"}`,
+};
+
+export type CardType = "WORD" | "TECH" | "QUOTE" | "MENTAL_MODEL" | "POEM" | "STORAGE";
+
+export async function regenerateSingleCard(cardType: CardType): Promise<Partial<DailyContentData>> {
+  const prompt = SINGLE_CARD_PROMPTS[cardType];
+  if (!prompt) throw new Error(`Unknown card type: ${cardType}`);
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const message = await client.messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 600,
+    messages: [{ role: "user", content: prompt }],
+  });
+  const block = message.content[0];
+  if (block.type !== "text") throw new Error(`Unexpected response type: ${block.type}`);
+  const cleaned = block.text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  return JSON.parse(cleaned) as Partial<DailyContentData>;
+}
+
 export async function generateDailyContent(): Promise<DailyContentData> {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const message = await client.messages.create({

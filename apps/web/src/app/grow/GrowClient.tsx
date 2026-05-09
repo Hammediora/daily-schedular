@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveContentAction, unsaveContentAction } from "./actions";
+import { saveContentAction, unsaveContentAction, regenerateCardAction } from "./actions";
+import type { SavedContentType } from "@operator-os/db";
 
 type DailyContent = {
   id: string;
@@ -54,6 +55,8 @@ export default function GrowClient({
 }) {
   const [savedItems, setSavedItems] = useState<SavedItem[]>(saved);
   const [activeTab, setActiveTab] = useState<ContentType>("WORD");
+  const [localContent, setLocalContent] = useState<DailyContent | null>(content);
+  const [refreshing, setRefreshing] = useState<ContentType | null>(null);
   const [, startTransition] = useTransition();
 
   function isSaved(type: ContentType, title: string) {
@@ -72,9 +75,30 @@ export default function GrowClient({
     } else {
       const optimistic: SavedItem = { id: crypto.randomUUID(), type, title, body, savedAt: new Date() };
       setSavedItems((prev) => [optimistic, ...prev]);
-      startTransition(() => saveContentAction({ workspaceId, type: type as any, title, body }));
+      startTransition(() => saveContentAction({ workspaceId, type: type as SavedContentType, title, body }));
     }
   }
+
+  async function handleRefresh(cardType: ContentType) {
+    setRefreshing(cardType);
+    try {
+      const partial = await regenerateCardAction(cardType);
+      setLocalContent((prev) => prev ? { ...prev, ...partial } : prev);
+    } finally {
+      setRefreshing(null);
+    }
+  }
+
+  const RefreshBtn = ({ cardType }: { cardType: ContentType }) => (
+    <button
+      onClick={() => handleRefresh(cardType)}
+      disabled={refreshing === cardType}
+      className="text-muted/40 hover:text-muted transition-colors disabled:cursor-not-allowed"
+      title="Regenerate"
+    >
+      <span className={`text-sm inline-block ${refreshing === cardType ? "animate-spin" : ""}`}>↻</span>
+    </button>
+  );
 
   const SaveBtn = ({ type, title, body }: { type: ContentType; title: string; body: string }) => {
     const active = isSaved(type, title);
@@ -89,7 +113,7 @@ export default function GrowClient({
     );
   };
 
-  if (!content) {
+  if (!localContent) {
     return (
       <div className="flex flex-col items-center justify-center py-32 gap-3">
         <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
@@ -99,63 +123,65 @@ export default function GrowClient({
     );
   }
 
+  const c = localContent;
   const filteredSaved = savedItems.filter((s) => s.type === activeTab);
 
   return (
     <div className="space-y-3">
 
       {/* ── Word of the Day ── */}
-      <section className="rounded-xl border border-border bg-gradient-to-br from-card/40 to-card/10 p-6">
+      <section className="rounded-xl border border-border bg-linear-to-br from-card/40 to-card/10 p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
             <span className="font-sans text-[10px] uppercase tracking-widest text-accent font-semibold">Word of the Day</span>
-            <h3 className="font-serif text-3xl font-bold mt-1">{content.word}</h3>
-            {content.wordPronunciation && (
-              <p className="font-sans text-xs text-accent/70 mt-0.5 tracking-wide">/{content.wordPronunciation}/</p>
+            <h3 className="font-serif text-3xl font-bold mt-1">{c.word}</h3>
+            {c.wordPronunciation && (
+              <p className="font-sans text-xs text-accent/70 mt-0.5 tracking-wide">/{c.wordPronunciation}/</p>
             )}
-            <p className="font-sans text-sm text-muted mt-1">{content.wordDefinition}</p>
+            <p className="font-sans text-sm text-muted mt-1">{c.wordDefinition}</p>
           </div>
-          <SaveBtn type="WORD" title={content.word} body={`${content.wordDefinition}\n\nCasual: ${content.wordCasual}\nBusiness: ${content.wordBusiness}\nTechnical: ${content.wordTechnical}`} />
+          <div className="flex items-center gap-2">
+            <RefreshBtn cardType="WORD" />
+            <SaveBtn type="WORD" title={c.word} body={`${c.wordDefinition}\n\nCasual: ${c.wordCasual}\nBusiness: ${c.wordBusiness}\nTechnical: ${c.wordTechnical}`} />
+          </div>
         </div>
         <div className="space-y-2 mt-4 border-t border-border/50 pt-4">
-          {content.wordCasual && (
+          {c.wordCasual && (
             <div className="flex gap-3">
               <span className="font-sans text-[10px] uppercase tracking-wider text-muted/60 w-20 shrink-0 pt-0.5">Casual</span>
-              <p className="font-sans text-sm italic text-foreground/75">&ldquo;{content.wordCasual}&rdquo;</p>
+              <p className="font-sans text-sm italic text-foreground/75">&ldquo;{c.wordCasual}&rdquo;</p>
             </div>
           )}
-          {content.wordBusiness && (
+          {c.wordBusiness && (
             <div className="flex gap-3">
               <span className="font-sans text-[10px] uppercase tracking-wider text-muted/60 w-20 shrink-0 pt-0.5">Business</span>
-              <p className="font-sans text-sm italic text-foreground/75">&ldquo;{content.wordBusiness}&rdquo;</p>
+              <p className="font-sans text-sm italic text-foreground/75">&ldquo;{c.wordBusiness}&rdquo;</p>
             </div>
           )}
-          {content.wordTechnical && (
+          {c.wordTechnical && (
             <div className="flex gap-3">
               <span className="font-sans text-[10px] uppercase tracking-wider text-muted/60 w-20 shrink-0 pt-0.5">Technical</span>
-              <p className="font-sans text-sm italic text-foreground/75">&ldquo;{content.wordTechnical}&rdquo;</p>
+              <p className="font-sans text-sm italic text-foreground/75">&ldquo;{c.wordTechnical}&rdquo;</p>
             </div>
           )}
-          {/* legacy fallback */}
-          {!content.wordCasual && content.wordExample && (
-            <p className="font-sans text-sm italic text-foreground/75">&ldquo;{content.wordExample}&rdquo;</p>
+          {!c.wordCasual && c.wordExample && (
+            <p className="font-sans text-sm italic text-foreground/75">&ldquo;{c.wordExample}&rdquo;</p>
           )}
         </div>
       </section>
 
       {/* ── Storage Deep Dive ── */}
-      {content.storageConceptTitle && (
+      {c.storageConceptTitle && (
         <section className="rounded-xl border border-accent/20 bg-accent/5 p-6">
           <div className="flex justify-between items-start mb-3">
             <span className="font-sans text-[10px] uppercase tracking-widest text-accent font-semibold">Storage Deep Dive</span>
-            <SaveBtn
-              type="STORAGE"
-              title={content.storageConceptTitle}
-              body={`${content.storageConceptTitle}\n\n${content.storageConceptExplanation}`}
-            />
+            <div className="flex items-center gap-2">
+              <RefreshBtn cardType="STORAGE" />
+              <SaveBtn type="STORAGE" title={c.storageConceptTitle} body={`${c.storageConceptTitle}\n\n${c.storageConceptExplanation}`} />
+            </div>
           </div>
-          <h3 className="font-serif text-xl font-bold mb-3">{content.storageConceptTitle}</h3>
-          <p className="font-sans text-sm leading-relaxed text-foreground/85">{content.storageConceptExplanation}</p>
+          <h3 className="font-serif text-xl font-bold mb-3">{c.storageConceptTitle}</h3>
+          <p className="font-sans text-sm leading-relaxed text-foreground/85">{c.storageConceptExplanation}</p>
         </section>
       )}
 
@@ -163,20 +189,26 @@ export default function GrowClient({
       <section className="rounded-xl border border-border bg-card/20 p-6">
         <div className="flex justify-between items-center mb-3">
           <span className="font-sans text-[10px] uppercase tracking-widest text-muted font-semibold">Tech Tip</span>
-          <SaveBtn type="TECH" title="Tech Tip" body={content.techTip} />
+          <div className="flex items-center gap-2">
+            <RefreshBtn cardType="TECH" />
+            <SaveBtn type="TECH" title="Tech Tip" body={c.techTip} />
+          </div>
         </div>
-        <p className="font-sans text-sm leading-relaxed text-foreground/85">{content.techTip}</p>
+        <p className="font-sans text-sm leading-relaxed text-foreground/85">{c.techTip}</p>
       </section>
 
       {/* ── Quote ── */}
       <section className="rounded-xl border border-border bg-card/20 p-6">
         <div className="flex justify-between items-center mb-4">
           <span className="font-sans text-[10px] uppercase tracking-widest text-muted font-semibold">Quote</span>
-          <SaveBtn type="QUOTE" title={content.quoteAuthor} body={`"${content.quote}" — ${content.quoteAuthor}`} />
+          <div className="flex items-center gap-2">
+            <RefreshBtn cardType="QUOTE" />
+            <SaveBtn type="QUOTE" title={c.quoteAuthor} body={`"${c.quote}" — ${c.quoteAuthor}`} />
+          </div>
         </div>
         <div className="border-l-2 border-accent/60 pl-5">
-          <p className="font-serif text-xl italic leading-relaxed mb-3">&ldquo;{content.quote}&rdquo;</p>
-          <p className="font-sans text-xs text-muted tracking-wide">— {content.quoteAuthor}</p>
+          <p className="font-serif text-xl italic leading-relaxed mb-3">&ldquo;{c.quote}&rdquo;</p>
+          <p className="font-sans text-xs text-muted tracking-wide">— {c.quoteAuthor}</p>
         </div>
       </section>
 
@@ -184,21 +216,27 @@ export default function GrowClient({
       <section className="rounded-xl border border-border bg-card/20 p-6">
         <div className="flex justify-between items-center mb-3">
           <span className="font-sans text-[10px] uppercase tracking-widest text-muted font-semibold">Mental Model</span>
-          <SaveBtn type="MENTAL_MODEL" title={content.mentalModel} body={`${content.mentalModel}\n\n${content.mentalModelExplanation}`} />
+          <div className="flex items-center gap-2">
+            <RefreshBtn cardType="MENTAL_MODEL" />
+            <SaveBtn type="MENTAL_MODEL" title={c.mentalModel} body={`${c.mentalModel}\n\n${c.mentalModelExplanation}`} />
+          </div>
         </div>
-        <h3 className="font-serif text-xl font-bold mb-2">{content.mentalModel}</h3>
-        <p className="font-sans text-sm leading-relaxed text-foreground/80">{content.mentalModelExplanation}</p>
+        <h3 className="font-serif text-xl font-bold mb-2">{c.mentalModel}</h3>
+        <p className="font-sans text-sm leading-relaxed text-foreground/80">{c.mentalModelExplanation}</p>
       </section>
 
       {/* ── Poem ── */}
       <section className="rounded-xl border border-border bg-card/20 p-6">
         <div className="flex justify-between items-center mb-4">
           <span className="font-sans text-[10px] uppercase tracking-widest text-muted font-semibold">Poem</span>
-          <SaveBtn type="POEM" title={content.poemTitle} body={`${content.poemTitle} — ${content.poemAuthor}\n\n${content.poem}`} />
+          <div className="flex items-center gap-2">
+            <RefreshBtn cardType="POEM" />
+            <SaveBtn type="POEM" title={c.poemTitle} body={`${c.poemTitle} — ${c.poemAuthor}\n\n${c.poem}`} />
+          </div>
         </div>
-        <h3 className="font-serif text-lg font-bold">{content.poemTitle}</h3>
-        <p className="font-sans text-xs text-muted mb-5">— {content.poemAuthor}</p>
-        <pre className="font-serif text-sm leading-8 whitespace-pre-wrap text-foreground/80">{content.poem}</pre>
+        <h3 className="font-serif text-lg font-bold">{c.poemTitle}</h3>
+        <p className="font-sans text-xs text-muted mb-5">— {c.poemAuthor}</p>
+        <pre className="font-serif text-sm leading-8 whitespace-pre-wrap text-foreground/80">{c.poem}</pre>
       </section>
 
       {/* ── Saved Library ── */}
