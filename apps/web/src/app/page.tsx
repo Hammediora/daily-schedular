@@ -10,10 +10,13 @@ import CurrentFocus from "@/components/CurrentFocus";
 import QuickCapture from "@/components/QuickCapture";
 import AddTaskModal from "@/components/AddTaskModal";
 import BlockDetailPanel from "@/components/BlockDetailPanel";
+import DatabaseUnavailableState from "@/components/DatabaseUnavailableState";
 import IbmChecklist from "@/components/IbmChecklist";
 import TodayWorkLog from "@/components/TodayWorkLog";
 import { MobileAccordion } from "@/components/ui/Accordion";
+import { getDatabaseIssue } from "@/lib/database-error";
 import Link from "next/link";
+import { getTodayContent } from "./grow/actions";
 
 function formatMinutes(minutes: number) {
   const h = Math.floor(minutes / 60) % 24;
@@ -69,7 +72,20 @@ const COMPLETION_CLASSES: Record<string, string> = {
 };
 
 export default async function Home() {
-  const workspace = await db.workspace.findFirst();
+  let workspace;
+
+  try {
+    workspace = await db.workspace.findFirst();
+  } catch (error) {
+    const databaseIssue = getDatabaseIssue(error);
+
+    if (databaseIssue) {
+      return <DatabaseUnavailableState issue={databaseIssue} />;
+    }
+
+    throw error;
+  }
+
   if (!workspace) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background text-foreground font-sans">
@@ -80,6 +96,8 @@ export default async function Home() {
       </div>
     );
   }
+
+  const growthContent = await getTodayContent();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -287,6 +305,41 @@ export default async function Home() {
             <div className="mt-4"><NowIndicator nowMinutes={nowMinutes} /></div>
           )}
         </div>
+
+        {/* Daily Growth Brief teaser */}
+        {growthContent && (
+          <div className="border border-border rounded-lg p-5 mb-8 bg-card/20">
+            <div className="flex justify-between items-center mb-3">
+              <p className="font-sans text-xs uppercase tracking-widest text-muted font-semibold">
+                Daily Growth Brief
+              </p>
+              <a
+                href="/grow"
+                className="font-sans text-xs text-muted hover:text-foreground transition-colors"
+              >
+                View all →
+              </a>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <p className="font-sans text-xs text-muted mb-1">Word</p>
+                <p className="font-serif text-base font-bold">{growthContent.word}</p>
+                <p className="font-sans text-xs text-muted/80 mt-0.5 line-clamp-1">
+                  {growthContent.wordDefinition}
+                </p>
+              </div>
+              <div>
+                <p className="font-sans text-xs text-muted mb-1">Quote</p>
+                <p className="font-serif text-sm italic line-clamp-2">
+                  &ldquo;{growthContent.quote}&rdquo;
+                </p>
+                <p className="font-sans text-xs text-muted mt-0.5">
+                  — {growthContent.quoteAuthor}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Today Work Log */}
         <MobileAccordion title="Work Log">

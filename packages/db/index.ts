@@ -10,6 +10,7 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
 export {
     BlockType,
     BlockCompletionState,
+    SavedContentType,
     WorkType,
     Lane,
     TaskStatus,
@@ -22,6 +23,8 @@ export {
     type WeeklyConstraint,
     type Workspace,
     type TaskStep,
+    type DailyContent,
+    type SavedContent,
 } from '@prisma/client'
 
 /** TimeBlockInstance with scheduledTasks and nested task — the standard query shape */

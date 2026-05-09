@@ -31,6 +31,7 @@ export default function Sidebar({
     { name: "History", href: "/history" },
     { name: "Weekly Report", href: "/report" },
     { name: "Plan Next Week", href: "/plan" },
+    { name: "Daily Growth", href: "/grow" },
   ];
 
   const managementLinks = [

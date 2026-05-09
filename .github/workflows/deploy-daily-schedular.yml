@@ -59,12 +59,13 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
           NEXT_TELEMETRY_DISABLED: ${{ secrets.NEXT_TELEMETRY_DISABLED || '1' }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT || '22' }}
-          envs: IMAGE_NAME,APP_DIR,CONTAINER_NAME,APP_HOST_PORT,IMAGE_TAG,GHCR_USERNAME,GHCR_PAT,DATABASE_URL,REDIS_URL,NEXT_TELEMETRY_DISABLED
+          envs: IMAGE_NAME,APP_DIR,CONTAINER_NAME,APP_HOST_PORT,IMAGE_TAG,GHCR_USERNAME,GHCR_PAT,DATABASE_URL,REDIS_URL,NEXT_TELEMETRY_DISABLED,ANTHROPIC_API_KEY
           script_stop: true
           script: |
             set -eu
@@ -81,6 +82,7 @@ jobs:
             DATABASE_URL=${DATABASE_URL}
             REDIS_URL=${REDIS_URL}
             NEXT_TELEMETRY_DISABLED=${NEXT_TELEMETRY_DISABLED:-1}
+            ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
             EOF
             elif [ ! -f .env ]; then
               echo "Missing DATABASE_URL/REDIS_URL secrets and no existing .env found at ${APP_DIR}/.env"

@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x", "debian-openssl-1.1.x"]
 }
 
 datasource db {
@@ -57,6 +56,15 @@ enum BlockCompletionState {
   SKIPPED
 }
 
+enum SavedContentType {
+  WORD
+  TECH
+  QUOTE
+  MENTAL_MODEL
+  POEM
+  STORAGE
+}
+
 // ============================================
 // MODELS
 // ============================================
@@ -85,6 +93,7 @@ model Workspace {
   weeklyConstraints   WeeklyConstraint[]
   scorecards          Scorecard[]
   dailyIntents        DailyIntent[]
+  savedContent        SavedContent[]
 }
 
 model WorkspaceMember {
@@ -229,4 +238,37 @@ model Scorecard {
   workspace     Workspace   @relation(fields: [workspaceId], references: [id])
 
   @@unique([workspaceId, weekStartDate])
+}
+
+model DailyContent {
+  id                     String   @id @default(cuid())
+  date                   DateTime @unique @db.Date
+  word                   String
+  wordDefinition         String
+  wordPronunciation      String  @default("")
+  wordCasual             String  @default("")
+  wordBusiness           String  @default("")
+  wordTechnical          String  @default("")
+  techTip                String
+  quote                  String
+  quoteAuthor            String
+  mentalModel            String
+  mentalModelExplanation String
+  poem                       String
+  poemTitle                  String
+  poemAuthor                 String
+  storageConceptTitle        String  @default("")
+  storageConceptExplanation  String  @default("")
+  createdAt                  DateTime @default(now())
+}
+
+model SavedContent {
+  id          String           @id @default(cuid())
+  workspaceId String
+  type        SavedContentType
+  title       String
+  body        String
+  savedAt     DateTime         @default(now())
+
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id])
 }
