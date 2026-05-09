@@ -4,6 +4,7 @@ import { db } from "@operator-os/db";
 import Sidebar from "@/components/Sidebar";
 import { getLaneStats } from "@/lib/lane-stats";
 import WeeklyReport from "@/components/WeeklyReport";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 const LANE_META: Record<string, { label: string; color: string }> = {
   REVENUE: { label: "Revenue", color: "#D4AF37" },
@@ -17,7 +18,10 @@ const BLOCK_LABELS: Record<string, string> = {
 };
 
 export default async function ReportPage() {
-  const workspace = await db.workspace.findFirst();
+  const workspace = await resolveWorkspaceForRequest({
+    requireAuth: true,
+    allowSeedFallback: true,
+  });
   if (!workspace) return null;
 
   const today = new Date();

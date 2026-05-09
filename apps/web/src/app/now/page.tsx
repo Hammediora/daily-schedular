@@ -1,6 +1,7 @@
 import { db } from "@operator-os/db";
 import NowModeClient from "@/components/NowModeClient";
 import Link from "next/link";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 const BLOCK_LABELS: Record<string, string> = {
   DEEP_WORK: "Deep Work", EXECUTION: "Execution", IBM: "IBM",
@@ -12,7 +13,10 @@ export default async function NowPage({
 }: {
   searchParams: Promise<{ blockId?: string }>;
 }) {
-  const workspace = await db.workspace.findFirst();
+  const workspace = await resolveWorkspaceForRequest({
+    requireAuth: true,
+    allowSeedFallback: true,
+  });
   if (!workspace) return null;
 
   const today = new Date();

@@ -2,9 +2,13 @@ import { db } from "@operator-os/db";
 import Sidebar from "@/components/Sidebar";
 import TasksClient from "@/components/TasksClient";
 import { getLaneStats } from "@/lib/lane-stats";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 export default async function TasksPage() {
-  const workspace = await db.workspace.findFirst();
+  const workspace = await resolveWorkspaceForRequest({
+    requireAuth: true,
+    allowSeedFallback: true,
+  });
   if (!workspace) return null;
 
   const [tasks, laneStats] = await Promise.all([

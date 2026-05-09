@@ -15,6 +15,9 @@ import IbmChecklist from "@/components/IbmChecklist";
 import TodayWorkLog from "@/components/TodayWorkLog";
 import { MobileAccordion } from "@/components/ui/Accordion";
 import { getDatabaseIssue } from "@/lib/database-error";
+import { getLaneForecast } from "@/lib/lane-forecast";
+import { getEnergyInsights } from "@/lib/energy-insights";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 import Link from "next/link";
 import { getTodayContent } from "./grow/actions";
 
@@ -71,11 +74,21 @@ const COMPLETION_CLASSES: Record<string, string> = {
   SKIPPED: "text-muted border-muted/30 bg-muted/10",
 };
 
+const LANE_ALERT_TEXT_CLASSES: Record<string, string> = {
+  REVENUE: "text-accent",
+  ASSET: "text-primary",
+  LEVERAGE: "text-muted",
+  HEALTH: "text-foreground",
+};
+
 export default async function Home() {
   let workspace;
 
   try {
-    workspace = await db.workspace.findFirst();
+    workspace = await resolveWorkspaceForRequest({
+      requireAuth: true,
+      allowSeedFallback: true,
+    });
   } catch (error) {
     const databaseIssue = getDatabaseIssue(error);
 
@@ -112,6 +125,11 @@ export default async function Home() {
     }),
   ]);
 
+  const [laneForecast, energyInsights] = await Promise.all([
+    getLaneForecast(workspace.id),
+    getEnergyInsights(workspace.id),
+  ]);
+
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const todayStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
@@ -133,6 +151,10 @@ export default async function Home() {
     ibmDeepDiveDone: todayIntent?.ibmDeepDiveDone ?? false,
     ibmRelationshipDone: todayIntent?.ibmRelationshipDone ?? false,
   };
+
+  const laneWarnings = laneForecast
+    .filter((f) => f.status !== "on_track")
+    .sort((a, b) => b.projectedShortfall - a.projectedShortfall);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
@@ -157,6 +179,62 @@ export default async function Home() {
 
         {/* Current Focus — what to do right now */}
         <CurrentFocus workspaceId={workspace.id} />
+
+        {/* Predictive lane alerts */}
+        <section className="mb-8 rounded border border-border bg-surface p-4 sm:p-5">
+          <p className="font-sans text-xs uppercase tracking-widest text-muted font-semibold mb-3">
+            Weekly Forecast
+          </p>
+          {laneWarnings.length === 0 ? (
+            <p className="font-sans text-sm text-primary">All lanes are on track based on current plan.</p>
+          ) : (
+            <div className="space-y-2">
+              {laneWarnings.slice(0, 3).map((warning) => (
+                <div key={warning.lane} className="flex items-center justify-between rounded border border-border px-3 py-2">
+                  <div>
+                    <p className={`font-sans text-sm font-semibold ${LANE_ALERT_TEXT_CLASSES[warning.lane] ?? "text-foreground"}`}>
+                      {warning.label}
+                    </p>
+                    <p className="font-sans text-xs text-muted">
+                      Need {warning.remainingRequired}m more this week
+                    </p>
+                  </div>
+                  <span className={`font-sans text-xs font-semibold px-2 py-1 rounded ${warning.status === "will_miss" ? "bg-accent/20 text-accent" : "bg-muted/10 text-muted"}`}>
+                    {warning.status === "will_miss" ? "Projected Miss" : "At Risk"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* Energy insights */}
+        <section className="mb-8 rounded border border-border bg-surface p-4 sm:p-5">
+          <p className="font-sans text-xs uppercase tracking-widest text-muted font-semibold mb-3">
+            Energy Insight (Last 21 Days)
+          </p>
+          {energyInsights.sampleSize === 0 ? (
+            <p className="font-sans text-sm text-muted">Complete and rate more blocks to unlock patterns.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="rounded border border-border px-3 py-2">
+                <p className="font-sans text-xs text-muted mb-1">Best block type</p>
+                <p className="font-serif text-base font-bold">{energyInsights.strongestBlockType}</p>
+                <p className="font-sans text-xs text-muted">Avg {energyInsights.strongestBlockAvg}/3</p>
+              </div>
+              <div className="rounded border border-border px-3 py-2">
+                <p className="font-sans text-xs text-muted mb-1">Best time window</p>
+                <p className="font-serif text-base font-bold">{energyInsights.bestWindowLabel}</p>
+                <p className="font-sans text-xs text-muted">Avg {energyInsights.bestWindowAvg}/3</p>
+              </div>
+              <div className="rounded border border-border px-3 py-2">
+                <p className="font-sans text-xs text-muted mb-1">Lowest energy block</p>
+                <p className="font-serif text-base font-bold">{energyInsights.weakestBlockType}</p>
+                <p className="font-sans text-xs text-muted">Avg {energyInsights.weakestBlockAvg}/3</p>
+              </div>
+            </div>
+          )}
+        </section>
 
         {/* Daily Command Panel */}
         <MobileAccordion title="Command Panel">
@@ -227,6 +305,11 @@ export default async function Home() {
                       <span className={`font-sans text-xs font-bold tracking-widest uppercase px-2 py-0.5 rounded flex items-center gap-1.5 ${currentBadgeClass}`}>
                         <span className={`inline-block w-1.5 h-1.5 rounded-full animate-pulse bg-current ${textClass}`} />
                         Active
+                      </span>
+                    )}
+                    {isCurrent && (
+                      <span className="font-sans text-xs text-muted border border-border px-2 py-0.5 rounded">
+                        {Math.max(0, minutesRemaining)}m left
                       </span>
                     )}
                     {isPast && block.completionState && block.completionState !== "OPEN" ? (

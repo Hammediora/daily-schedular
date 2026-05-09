@@ -3,10 +3,11 @@
 import { db } from "@operator-os/db";
 import { revalidatePath } from "next/cache";
 import { Scheduler } from "@operator-os/core";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 export async function generateWeekScheduleAction() {
     try {
-        const workspace = await db.workspace.findFirst();
+        const workspace = await resolveWorkspaceForRequest({ requireAuth: true, allowSeedFallback: true });
         if (!workspace) throw new Error("No workspace found");
 
         // Build Mon–Sun for next week (or this week if before Thursday)

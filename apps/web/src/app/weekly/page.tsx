@@ -3,11 +3,15 @@ import Sidebar from "@/components/Sidebar";
 import { getLaneStats } from "@/lib/lane-stats";
 import { getOrGenerateWeekBlocks } from "@/lib/os-engine";
 import WeeklyClient from "@/components/WeeklyClient";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default async function Weekly() {
-  const workspace = await db.workspace.findFirst();
+  const workspace = await resolveWorkspaceForRequest({
+    requireAuth: true,
+    allowSeedFallback: true,
+  });
   if (!workspace) return null;
 
   const today = new Date();

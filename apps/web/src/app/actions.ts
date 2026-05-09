@@ -3,6 +3,7 @@
 import { db, Lane, WorkType, BlockType } from "@operator-os/db";
 import { Scheduler } from "@operator-os/core";
 import { revalidatePath } from "next/cache";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 // ─── SHARED TYPES & VALIDATION ──────────────────────────────────────────────
 
@@ -30,6 +31,103 @@ function assertValidBlockType(value: string): asserts value is BlockType {
     if (!Object.values(BlockType).includes(value as BlockType)) {
         throw new Error(`Invalid block type: ${value}`);
     }
+}
+
+async function rescheduleBacklogIntoOpenBlocks(workspaceId: string, timezone = "America/Chicago") {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const backlogTasks = await db.task.findMany({
+        where: { workspaceId, status: "BACKLOG" },
+    });
+
+    if (backlogTasks.length === 0) {
+        return 0;
+    }
+
+    const remainingBlocks = await db.timeBlockInstance.findMany({
+        where: {
+            workspaceId,
+            date: today,
+            completionState: "OPEN",
+        },
+        include: {
+            scheduledTasks: { select: { allocatedMinutes: true } },
+        },
+    });
+
+    const futureBlocks = remainingBlocks.filter(
+        b => b.startMinute + b.durationMinutes > nowMinutes
+    );
+
+    if (futureBlocks.length === 0) {
+        return 0;
+    }
+
+    const blocksWithCapacity = futureBlocks
+        .map(b => {
+            const usedMinutes = b.scheduledTasks.reduce(
+                (sum, st) => sum + (st.allocatedMinutes ?? 0), 0
+            );
+            return {
+                ...b,
+                durationMinutes: Math.max(0, b.durationMinutes - usedMinutes),
+            };
+        })
+        .filter(b => b.durationMinutes > 0);
+
+    if (blocksWithCapacity.length === 0) {
+        return 0;
+    }
+
+    const placements = Scheduler.computeSchedule({
+        backlogTasks,
+        availableBlocks: blocksWithCapacity,
+        timezone,
+    });
+
+    if (placements.length === 0) {
+        return 0;
+    }
+
+    const existingScheduled = await db.scheduledTask.findMany({
+        where: {
+            timeBlockInstanceId: { in: futureBlocks.map(b => b.id) },
+        },
+        select: { taskId: true, timeBlockInstanceId: true },
+    });
+
+    const existingSet = new Set(
+        existingScheduled.map(s => `${s.taskId}__${s.timeBlockInstanceId}`)
+    );
+
+    const newPlacements = placements.filter(
+        p => !existingSet.has(`${p.taskId}__${p.timeBlockInstanceId}`)
+    );
+
+    if (newPlacements.length === 0) {
+        return 0;
+    }
+
+    await db.$transaction(
+        newPlacements.map(p => db.scheduledTask.create({
+            data: {
+                taskId: p.taskId,
+                timeBlockInstanceId: p.timeBlockInstanceId,
+                allocatedMinutes: p.allocatedMinutes,
+                orderIndex: p.orderIndex,
+            },
+        }))
+    );
+
+    await db.task.updateMany({
+        where: { id: { in: newPlacements.map(p => p.taskId) } },
+        data: { status: "SCHEDULED" },
+    });
+
+    return newPlacements.length;
 }
 
 // ─── TASK ACTIONS ─────────────────────────────────────────────────────────────
@@ -103,7 +201,7 @@ export async function createTaskAction(data: {
         assertValidLane(data.lane);
         assertValidWorkType(data.workType);
 
-        const workspace = await db.workspace.findFirst();
+        const workspace = await resolveWorkspaceForRequest({ requireAuth: true, allowSeedFallback: true });
         if (!workspace) throw new Error("No workspace found");
 
         await db.task.create({
@@ -179,7 +277,7 @@ export async function updateDailyIntentAction(data: {
     reflectionNotes?: string;
 }): Promise<ActionResult> {
     try {
-        const workspace = await db.workspace.findFirst();
+        const workspace = await resolveWorkspaceForRequest({ requireAuth: true, allowSeedFallback: true });
         if (!workspace) throw new Error("No workspace");
 
         const today = new Date();
@@ -209,7 +307,7 @@ export async function updateWeeklyConstraintAction(data: {
     try {
         assertValidLane(data.lane);
 
-        const workspace = await db.workspace.findFirst();
+        const workspace = await resolveWorkspaceForRequest({ requireAuth: true, allowSeedFallback: true });
         if (!workspace) throw new Error("No workspace");
 
         await db.weeklyConstraint.upsert({
@@ -247,7 +345,7 @@ export async function createBlockTemplateAction(data: {
         assertNonEmpty(data.title, "Title");
         assertValidBlockType(data.type);
 
-        const workspace = await db.workspace.findFirst();
+        const workspace = await resolveWorkspaceForRequest({ requireAuth: true, allowSeedFallback: true });
         if (!workspace) throw new Error("No workspace");
 
         await db.timeBlockTemplate.create({
@@ -287,7 +385,7 @@ export async function deleteBlockTemplateAction(templateId: string): Promise<Act
 
 export async function submitDailyReviewAction(reflectionNotes: string): Promise<ActionResult> {
     try {
-        const workspace = await db.workspace.findFirst();
+        const workspace = await resolveWorkspaceForRequest({ requireAuth: true, allowSeedFallback: true });
         if (!workspace) throw new Error("No workspace");
 
         const today = new Date();
@@ -394,6 +492,9 @@ export async function completeBlockAction(
             },
         });
 
+        // Immediately try to place returned tasks into remaining OPEN blocks.
+        await rescheduleBacklogIntoOpenBlocks(block.workspaceId, "America/Chicago");
+
         revalidatePath("/");
         revalidatePath("/now");
         revalidatePath("/tasks");
@@ -429,6 +530,12 @@ export async function bumpTaskAction(taskId: string): Promise<ActionResult> {
     try {
         assertNonEmpty(taskId, "Task ID");
 
+        const task = await db.task.findUnique({
+            where: { id: taskId },
+            select: { workspaceId: true },
+        });
+        if (!task) throw new Error("Task not found");
+
         // Remove all scheduled entries for this task
         await db.scheduledTask.deleteMany({ where: { taskId } });
 
@@ -437,6 +544,8 @@ export async function bumpTaskAction(taskId: string): Promise<ActionResult> {
             where: { id: taskId },
             data: { status: "BACKLOG" },
         });
+
+        await rescheduleBacklogIntoOpenBlocks(task.workspaceId, "America/Chicago");
 
         revalidatePath("/");
         revalidatePath("/now");
@@ -566,7 +675,7 @@ export async function updateIbmChecklistAction(
             throw new Error(`Unknown IBM field: ${field}`);
         }
 
-        const workspace = await db.workspace.findFirst();
+        const workspace = await resolveWorkspaceForRequest({ requireAuth: true, allowSeedFallback: true });
         if (!workspace) throw new Error("No workspace");
 
         const today = new Date();
@@ -599,108 +708,13 @@ export async function updateIbmChecklistAction(
 export async function autoRescheduleAction(workspaceId: string): Promise<ActionResult & { rescheduledCount?: number }> {
     try {
         assertNonEmpty(workspaceId, "Workspace ID");
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
-
-        const backlogTasks = await db.task.findMany({
-            where: { workspaceId, status: "BACKLOG" },
-        });
-
-        if (backlogTasks.length === 0) {
-            return { success: true, rescheduledCount: 0 };
-        }
-
-        // Get remaining non-past, OPEN blocks today
-        const remainingBlocks = await db.timeBlockInstance.findMany({
-            where: {
-                workspaceId,
-                date: today,
-                completionState: "OPEN",
-            },
-            include: {
-                scheduledTasks: { select: { allocatedMinutes: true } },
-            },
-        });
-
-        // Filter to blocks that haven't ended yet
-        const futureBlocks = remainingBlocks.filter(
-            b => b.startMinute + b.durationMinutes > nowMinutes
-        );
-
-        if (futureBlocks.length === 0) {
-            return { success: true, rescheduledCount: 0 };
-        }
-
-        // Create virtual blocks with remaining capacity
-        const blocksWithCapacity = futureBlocks.map(b => {
-            const usedMinutes = b.scheduledTasks.reduce(
-                (sum, st) => sum + (st.allocatedMinutes ?? 0), 0
-            );
-            return {
-                ...b,
-                durationMinutes: Math.max(0, b.durationMinutes - usedMinutes),
-            };
-        }).filter(b => b.durationMinutes > 0);
-
-        const placements = Scheduler.computeSchedule({
-            backlogTasks,
-            availableBlocks: blocksWithCapacity,
-            timezone: "America/Chicago",
-        });
-
-        if (placements.length === 0) {
-            return { success: true, rescheduledCount: 0 };
-        }
-
-        // Deduplicate against existing
-        const existingPairs = new Set(
-            futureBlocks.flatMap(b =>
-                (b as { scheduledTasks: { taskId?: string; timeBlockInstanceId?: string }[] })
-                    .scheduledTasks?.map?.(() => "") ?? []
-            )
-        );
-
-        // Fetch actual existing for dedup
-        const existingScheduled = await db.scheduledTask.findMany({
-            where: {
-                timeBlockInstanceId: { in: futureBlocks.map(b => b.id) },
-            },
-            select: { taskId: true, timeBlockInstanceId: true },
-        });
-
-        const existingSet = new Set(
-            existingScheduled.map(s => `${s.taskId}__${s.timeBlockInstanceId}`)
-        );
-
-        const newPlacements = placements.filter(
-            p => !existingSet.has(`${p.taskId}__${p.timeBlockInstanceId}`)
-        );
-
-        if (newPlacements.length > 0) {
-            await db.$transaction(
-                newPlacements.map(p => db.scheduledTask.create({
-                    data: {
-                        taskId: p.taskId,
-                        timeBlockInstanceId: p.timeBlockInstanceId,
-                        allocatedMinutes: p.allocatedMinutes,
-                        orderIndex: p.orderIndex,
-                    },
-                }))
-            );
-
-            await db.task.updateMany({
-                where: { id: { in: newPlacements.map(p => p.taskId) } },
-                data: { status: "SCHEDULED" },
-            });
-        }
+        const rescheduledCount = await rescheduleBacklogIntoOpenBlocks(workspaceId, "America/Chicago");
 
         revalidatePath("/");
         revalidatePath("/now");
         revalidatePath("/tasks");
         revalidatePath("/weekly");
-        return { success: true, rescheduledCount: newPlacements.length };
+        return { success: true, rescheduledCount };
     } catch (error) {
         console.error("autoRescheduleAction failed:", error);
         return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
@@ -711,7 +725,7 @@ export async function autoRescheduleAction(workspaceId: string): Promise<ActionR
 
 export async function autoRebalanceAction(): Promise<ActionResult & { tasksScheduled?: number; message?: string }> {
     try {
-        const workspace = await db.workspace.findFirst();
+        const workspace = await resolveWorkspaceForRequest({ requireAuth: true, allowSeedFallback: true });
         if (!workspace) throw new Error("No workspace");
 
         const today = new Date();
@@ -860,7 +874,7 @@ export async function updateWeekOutcomesAction(
     outcome3: string,
 ): Promise<ActionResult> {
     try {
-        const workspace = await db.workspace.findFirst();
+        const workspace = await resolveWorkspaceForRequest({ requireAuth: true, allowSeedFallback: true });
         if (!workspace) throw new Error("No workspace");
 
         // Store on next Monday's DailyIntent

@@ -1,4 +1,3 @@
-import { db } from "@operator-os/db";
 import { getLaneStats } from "@/lib/lane-stats";
 import Sidebar from "@/components/Sidebar";
 import {
@@ -7,11 +6,15 @@ import {
   generateDailyContentAction,
 } from "./actions";
 import GrowClient from "./GrowClient";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
 
 export default async function GrowPage() {
-  const workspace = await db.workspace.findFirst();
+  const workspace = await resolveWorkspaceForRequest({
+    requireAuth: true,
+    allowSeedFallback: true,
+  });
   if (!workspace) return null;
 
   let content = await getTodayContent();

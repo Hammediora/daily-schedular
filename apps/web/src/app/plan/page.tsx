@@ -5,6 +5,7 @@ import PlanClient from "./PlanClient";
 import WeekOutcomesForm from "@/components/WeekOutcomesForm";
 import BacklogLockPanel from "@/components/BacklogLockPanel";
 import Link from "next/link";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 const LANE_META: Record<string, string> = {
   REVENUE: "Revenue", ASSET: "Asset", LEVERAGE: "Leverage", HEALTH: "Health",
@@ -47,7 +48,10 @@ async function getWeekStats(workspaceId: string, offsetWeeks: number) {
 }
 
 export default async function PlanPage() {
-  const workspace = await db.workspace.findFirst();
+  const workspace = await resolveWorkspaceForRequest({
+    requireAuth: true,
+    allowSeedFallback: true,
+  });
   if (!workspace) return null;
 
   const today = new Date();

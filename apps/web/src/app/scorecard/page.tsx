@@ -1,6 +1,7 @@
 import { db } from "@operator-os/db";
 import Sidebar from "@/components/Sidebar";
 import { getLaneStats } from "@/lib/lane-stats";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 import Link from "next/link";
 import { MobileAccordion } from "@/components/ui/Accordion";
 
@@ -34,7 +35,10 @@ async function getWeekLaneMinutes(workspaceId: string, offsetWeeks: number) {
 }
 
 export default async function Scorecard() {
-  const workspace = await db.workspace.findFirst();
+  const workspace = await resolveWorkspaceForRequest({
+    requireAuth: true,
+    allowSeedFallback: true,
+  });
   if (!workspace) return null;
 
   const today = new Date();
@@ -134,7 +138,7 @@ export default async function Scorecard() {
             style={{ backgroundColor: "rgba(212,175,55,0.04)", borderColor: "#D4AF3730" }}>
             <div>
               <p className="font-sans text-xs uppercase tracking-widest font-semibold mb-1" style={{ color: "#D4AF37" }}>Sunday Planning</p>
-              <p className="font-sans text-sm text-foreground">Review this week and generate next week's schedule.</p>
+              <p className="font-sans text-sm text-foreground">Review this week and generate next week&apos;s schedule.</p>
             </div>
             <Link href="/plan" className="font-sans text-sm font-semibold bg-primary text-primary-foreground px-5 py-2.5 rounded">
               Plan Next Week →

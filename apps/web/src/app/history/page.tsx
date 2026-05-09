@@ -2,6 +2,7 @@ import { db } from "@operator-os/db";
 import Sidebar from "@/components/Sidebar";
 import Link from "next/link";
 import { getLaneStats } from "@/lib/lane-stats";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 function formatMinutes(minutes: number) {
   const h = Math.floor(minutes / 60) % 24;
@@ -17,7 +18,10 @@ const BLOCK_LABELS: Record<string, string> = {
 };
 
 export default async function HistoryPage() {
-  const workspace = await db.workspace.findFirst();
+  const workspace = await resolveWorkspaceForRequest({
+    requireAuth: true,
+    allowSeedFallback: true,
+  });
   if (!workspace) return null;
 
   // Get last 14 days of block instances

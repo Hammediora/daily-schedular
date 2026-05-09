@@ -54,7 +54,7 @@ export async function getLaneForecast(workspaceId: string): Promise<LaneForecast
     // Tasks completed this week
     db.task.findMany({
       where: { workspaceId, status: "DONE", completedAt: { gte: weekStart, lt: weekEnd } },
-      select: { lane: true, effortMins: true },
+      select: { lane: true, effortMins: true, actualMinutes: true },
     }),
 
     // Blocks with their scheduled tasks (to find future scheduled tasks)
@@ -72,6 +72,7 @@ export async function getLaneForecast(workspaceId: string): Promise<LaneForecast
       where: {
         workspaceId,
         date: { gte: today, lt: weekEnd },
+        completionState: "OPEN",
       },
       include: {
         scheduledTasks: { select: { allocatedMinutes: true } },
@@ -90,9 +91,7 @@ export async function getLaneForecast(workspaceId: string): Promise<LaneForecast
   };
 
   // Filter to only future blocks, also filter OPEN completion state in JS
-  const futureBlocks = blocksForCapacity.filter(b =>
-    isFutureBlock(b) && ((b as any).completionState ?? "OPEN") === "OPEN"
-  );
+  const futureBlocks = blocksForCapacity.filter(isFutureBlock);
 
   // Extract future scheduled tasks from blocks
   const futureScheduledTasks = blocksWithTasks
@@ -105,7 +104,7 @@ export async function getLaneForecast(workspaceId: string): Promise<LaneForecast
 
     const completedMinutes = doneTasks
       .filter(t => t.lane === lane)
-      .reduce((sum, t) => sum + ((t as any).actualMinutes ?? t.effortMins), 0);
+      .reduce((sum, t) => sum + (t.actualMinutes ?? t.effortMins), 0);
 
     const scheduledMinutes = futureScheduledTasks
       .filter(st => st.task.lane === lane)

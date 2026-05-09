@@ -2,9 +2,13 @@ import { db } from "@operator-os/db";
 import Sidebar from "@/components/Sidebar";
 import SettingsClient from "@/components/SettingsClient";
 import { getLaneStats } from "@/lib/lane-stats";
+import { resolveWorkspaceForRequest } from "@/lib/workspace";
 
 export default async function SettingsPage() {
-  const workspace = await db.workspace.findFirst();
+  const workspace = await resolveWorkspaceForRequest({
+    requireAuth: true,
+    allowSeedFallback: true,
+  });
   if (!workspace) return null;
 
   const today = new Date();
