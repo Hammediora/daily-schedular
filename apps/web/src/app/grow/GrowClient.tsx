@@ -130,7 +130,7 @@ export default function GrowClient({
     <div className="space-y-3">
 
       {/* ── Word of the Day ── */}
-      <section className="rounded-xl border border-border bg-linear-to-br from-card/40 to-card/10 p-6">
+      <section className="rounded-xl border border-border bg-gradient-to-br from-card/40 to-card/10 p-6">
         <div className="flex justify-between items-start mb-4">
           <div>
             <span className="font-sans text-[10px] uppercase tracking-widest text-accent font-semibold">Word of the Day</span>
