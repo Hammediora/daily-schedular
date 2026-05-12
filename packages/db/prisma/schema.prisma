@@ -94,6 +94,8 @@ model Workspace {
   scorecards          Scorecard[]
   dailyIntents        DailyIntent[]
   savedContent        SavedContent[]
+  weekReviews         WeekReview[]
+  dailyBriefs         DailyFocusBrief[]
 }
 
 model WorkspaceMember {
@@ -271,4 +273,53 @@ model SavedContent {
   savedAt     DateTime         @default(now())
 
   workspace   Workspace        @relation(fields: [workspaceId], references: [id])
+}
+
+// Permanent log of every value ever generated — used for deduplication
+model GrowthUsedValue {
+  id        String   @id @default(cuid())
+  field     String   // "word" | "quoteAuthor" | "mentalModel" | "poemTitle" | "storageConceptTitle"
+  value     String
+  createdAt DateTime @default(now())
+
+  @@unique([field, value])
+  @@index([field])
+}
+
+// Weekly AI-generated gym/fitness plan (shared — not per workspace)
+model FitnessContent {
+  id        String   @id @default(cuid())
+  weekStart DateTime @unique @db.Date
+  planJson  String   // JSON: [{day,type,focus,exercises:[{name,sets,reps,rest,tip}],duration,notes}]
+  createdAt DateTime @default(now())
+}
+
+// AI-generated weekly review per workspace
+model WeekReview {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  weekStart    DateTime  @db.Date
+  narrative    String    // paragraph summary of the week
+  winsJson     String    // JSON array of win strings
+  improvementsJson String // JSON array of improvement strings
+  focusNext    String    // one-sentence focus for next week
+  createdAt    DateTime  @default(now())
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id])
+  @@unique([workspaceId, weekStart])
+}
+
+// AI-generated daily operational brief per workspace
+model DailyFocusBrief {
+  id          String    @id @default(cuid())
+  workspaceId String
+  date        DateTime  @db.Date
+  headline    String    // one bold line for the day
+  strategyTip String    // tactical advice for today's blocks
+  riskAlert   String?   // any scheduling/lane risk spotted
+  motivation  String    // short motivational line
+  createdAt   DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+  @@unique([workspaceId, date])
 }

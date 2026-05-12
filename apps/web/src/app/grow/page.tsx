@@ -1,20 +1,19 @@
+import { db } from "@operator-os/db";
 import { getLaneStats } from "@/lib/lane-stats";
 import Sidebar from "@/components/Sidebar";
 import {
   getTodayContent,
   getSavedContent,
   generateDailyContentAction,
+  getGrowthStreak,
 } from "./actions";
 import GrowClient from "./GrowClient";
-import { resolveWorkspaceForRequest } from "@/lib/workspace";
+import GrowNav from "./GrowNav";
 
 export const dynamic = "force-dynamic";
 
 export default async function GrowPage() {
-  const workspace = await resolveWorkspaceForRequest({
-    requireAuth: true,
-    allowSeedFallback: true,
-  });
+  const workspace = await db.workspace.findFirst();
   if (!workspace) return null;
 
   let content = await getTodayContent();
@@ -23,9 +22,10 @@ export default async function GrowPage() {
     content = await getTodayContent();
   }
 
-  const [saved, laneStats] = await Promise.all([
+  const [saved, laneStats, streak] = await Promise.all([
     getSavedContent(workspace.id),
     getLaneStats(workspace.id),
+    getGrowthStreak(),
   ]);
 
   return (
@@ -36,7 +36,7 @@ export default async function GrowPage() {
         laneStats={laneStats}
       />
       <main className="flex-1 px-4 sm:px-16 py-6 sm:py-12 max-w-3xl">
-        <header className="mb-12">
+        <header className="mb-8">
           <p className="font-sans text-sm text-muted mb-2 tracking-wide uppercase">
             Personal Growth
           </p>
@@ -49,6 +49,7 @@ export default async function GrowPage() {
             })}
           </p>
         </header>
+        <GrowNav savedCount={saved.length} streak={streak} />
         <GrowClient
           content={content}
           saved={saved}

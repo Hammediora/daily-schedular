@@ -25,6 +25,7 @@ export {
     type TaskStep,
     type DailyContent,
     type SavedContent,
+    type GrowthUsedValue,
 } from '@prisma/client'
 
 /** TimeBlockInstance with scheduledTasks and nested task — the standard query shape */

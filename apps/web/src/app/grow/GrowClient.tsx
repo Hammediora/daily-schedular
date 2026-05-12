@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { saveContentAction, unsaveContentAction, regenerateCardAction } from "./actions";
 import type { SavedContentType } from "@operator-os/db";
@@ -12,7 +13,7 @@ type DailyContent = {
   wordCasual?: string;
   wordBusiness?: string;
   wordTechnical?: string;
-  wordExample?: string; // legacy fallback
+  wordExample?: string;
   techTip: string;
   quote: string;
   quoteAuthor: string;
@@ -35,15 +36,6 @@ type SavedItem = {
 
 type ContentType = "WORD" | "TECH" | "QUOTE" | "MENTAL_MODEL" | "POEM" | "STORAGE";
 
-const TABS: { key: ContentType; label: string }[] = [
-  { key: "WORD", label: "Words" },
-  { key: "STORAGE", label: "Storage" },
-  { key: "TECH", label: "Tech" },
-  { key: "QUOTE", label: "Quotes" },
-  { key: "MENTAL_MODEL", label: "Models" },
-  { key: "POEM", label: "Poems" },
-];
-
 export default function GrowClient({
   content,
   saved,
@@ -54,7 +46,6 @@ export default function GrowClient({
   workspaceId: string;
 }) {
   const [savedItems, setSavedItems] = useState<SavedItem[]>(saved);
-  const [activeTab, setActiveTab] = useState<ContentType>("WORD");
   const [localContent, setLocalContent] = useState<DailyContent | null>(content);
   const [refreshing, setRefreshing] = useState<ContentType | null>(null);
   const [, startTransition] = useTransition();
@@ -124,7 +115,7 @@ export default function GrowClient({
   }
 
   const c = localContent;
-  const filteredSaved = savedItems.filter((s) => s.type === activeTab);
+  const savedCount = savedItems.length;
 
   return (
     <div className="space-y-3">
@@ -239,48 +230,17 @@ export default function GrowClient({
         <pre className="font-serif text-sm leading-8 whitespace-pre-wrap text-foreground/80">{c.poem}</pre>
       </section>
 
-      {/* ── Saved Library ── */}
-      <section className="mt-10 border-t border-border pt-8">
-        <h3 className="font-serif text-xl font-bold mb-5">Saved</h3>
-        <div className="flex gap-2 mb-6 flex-wrap">
-          {TABS.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`font-sans text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                activeTab === tab.key
-                  ? "border-accent text-accent bg-accent/10"
-                  : "border-border text-muted hover:text-foreground"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+      {/* ── Footer link to saved library ── */}
+      {savedCount > 0 && (
+        <div className="pt-4 text-center">
+          <Link
+            href="/grow/saved"
+            className="font-sans text-xs text-muted/60 hover:text-accent transition-colors"
+          >
+            View your {savedCount} saved item{savedCount !== 1 ? "s" : ""} →
+          </Link>
         </div>
-        {filteredSaved.length === 0 ? (
-          <p className="font-sans text-sm text-muted/60">Nothing saved yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {filteredSaved.map((item) => (
-              <div key={item.id} className="rounded-lg border border-border p-4 flex justify-between gap-4 hover:bg-card/20 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <p className="font-sans text-sm font-medium mb-1">{item.title}</p>
-                  <p className="font-sans text-xs text-muted line-clamp-2 whitespace-pre-line">{item.body}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setSavedItems((prev) => prev.filter((s) => s.id !== item.id));
-                    startTransition(() => unsaveContentAction(item.id));
-                  }}
-                  className="text-muted/40 hover:text-muted text-lg shrink-0 leading-none"
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      )}
     </div>
   );
 }
